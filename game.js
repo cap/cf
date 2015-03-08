@@ -8,9 +8,13 @@ var visibility;
 var queue;
 var things;
 var key_handler;
+
+var player_alive;
 var player_start_pos;
 var player_pos;
 var player_score;
+var player_narration;
+
 var camera_pos;
 var show_title;
 
@@ -37,11 +41,30 @@ function make_next_row(row) {
   ++gen_y;
   if(gen_y == gen_state_end) {
     var dart = ROT.RNG.getUniform();
-    if(dart < .7) gen_state = "grass";
+    if(dart < .5) gen_state = "grass";
     else gen_state = "water";
 
-    gen_state_end = gen_y + Math.floor(ROT.RNG.getUniform() * 7);
+    gen_state_end = gen_y + 1 + Math.floor(ROT.RNG.getUniform() * 7);
   }
+}
+
+function init_game() {
+  queue.clear();
+
+  gen_y = 0;
+  gen_state = "grass";
+  gen_state_end = 7;
+
+  for(var y = 0; y < map.length; ++y) {
+    make_next_row(map[y]);
+  }
+
+  player_alive = true;
+  player_start_pos = [Math.floor(map_shape[0] / 2), 3];
+  player_pos = player_start_pos.slice();
+  player_score = 0;
+  player_narration = "";
+  show_title = true;
 }
 
 function init() {
@@ -55,9 +78,6 @@ function init() {
   map_shape = [13, 100];
   camera_pos = [0, 0];
 
-  gen_y = 0;
-  gen_state = 'grass';
-  gen_state_end = 7;
 
   queue = new ROT.EventQueue();
   display = new ROT.Display({
@@ -73,14 +93,6 @@ function init() {
     map[i] = new Array(map_shape[0]);
     visibility[i] = new Array(map_shape[0]);
   }
-  for(var y = 0; y < map.length; ++y) {
-    make_next_row(map[y]);
-  }
-
-  player_start_pos = [Math.floor(map_shape[0] / 2), 3];
-  player_pos = player_start_pos.slice();
-  player_score = 0;
-  show_title = true;
 
   things = new Array(2);
   things[0] = {p: [3, 2], dt: 60};
@@ -91,6 +103,7 @@ function init() {
     queue.add(things[i], things[i].dt)
   }
 
+  init_game();
 
   draw();
   key_handler = window.addEventListener("keyup", key_up);
@@ -214,17 +227,27 @@ function draw() {
 
   {
     var fg = "#fff";
+    var tile = "@";
+    if(!player_alive) {
+      fg = "#000";
+      tile = "X";
+    }
     var bg = ROT.Color.toRGB(get_bg(player_pos));
     var pos = world_to_screen(player_pos);
-    display.draw(pos[0], pos[1], "@", fg, bg);
+    display.draw(pos[0], pos[1], tile, fg, bg);
   }
 
-  if(player_score > 0) {
+  {
     var fg = [255, 255, 255];
     var screen_pos = [0, 0];
     var bg = get_bg(screen_to_world(screen_pos));
-    display.drawText(
-      screen_pos[0], screen_pos[1], "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}" + player_score.toString());
+    var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
+    if(player_score > 0) {
+      display.drawText(
+        screen_pos[0], screen_pos[1], col + player_score.toString());
+    }
+    var x = Math.floor((screen_shape[0] - player_narration.length) / 2);
+    display.drawText(x, 0, col + player_narration);
   }
 
   if(show_title) {
@@ -276,17 +299,21 @@ function key_up(event) {
   }
   if(dp[0] != 0 || dp[1] != 0) {
     show_title = false;
-  }
 
-  var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
-  var new_tile = map[new_pos[1]][new_pos[0]];
-  if(new_tile == "." || new_tile == "o") {
-    player_pos[0] += dp[0];
-    player_pos[1] += dp[1];
-    player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
-    window.console.log(player_score);
-    window.console.log(player_pos);
-    window.console.log(player_start_pos);
+    if(player_alive) {
+      var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
+      var new_tile = map[new_pos[1]][new_pos[0]];
+      if(new_tile == "." || new_tile == "o" || new_tile == "~") {
+        player_pos[0] += dp[0];
+        player_pos[1] += dp[1];
+        player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
+        if(new_tile == "~") {
+          player_alive = false;
+        }
+      }
+    } else {
+      init_game();
+    }
   }
 
   camera_pos = [0, Math.max(0, player_pos[1] - 3)];
