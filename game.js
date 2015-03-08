@@ -36,7 +36,7 @@ function make_next_row(terrain, mover) {
   if(gen_state == "grass") {
     for(var x = 0; x < map_shape[0]; ++x) {
       terrain[x] = ".";
-      if(ROT.RNG.getUniform() > .9) {
+      if(gen_y == 0 || ROT.RNG.getUniform() > .9) {
         terrain[x] = "*";
       }
       if(x < gutter_width || x >= map_shape[0] - gutter_width) {
@@ -61,6 +61,9 @@ function make_next_row(terrain, mover) {
           dt = 60;
         } else {
           dt = 90;
+        }
+        if(ROT.RNG.getUniform() < .5) {
+          dt *= -1;
         }
       }
     }
@@ -301,13 +304,14 @@ function tick() {
   draw();
 
   for(var y = 0; y < map_shape[1]; ++y) {
-    if(mover_dts[y] > 0) {
+    if(mover_dts[y] != 0) {
       if(player_alive && player_pos[1] == y && game_time % mover_dts[y] == 0) {
-        player_pos[0]--;
+        player_pos[0] -= mover_dts[y] / Math.abs(mover_dts[y]);
       }
       var dx = Math.floor(game_time / mover_dts[y]);
+      while(dx < 0) dx += mover_width;
       for(var x = 0; x < map_shape[0]; ++x) {
-        map[y][x] = movers[y][x + dx];
+        map[y][x] = movers[y][(x + dx) % mover_width];
       }
     }
   }
