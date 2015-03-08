@@ -8,7 +8,9 @@ var visibility;
 var queue;
 var things;
 var key_handler;
+var player_start_pos;
 var player_pos;
+var player_score;
 var camera_pos;
 
 var gen_y;
@@ -74,7 +76,9 @@ function init() {
     make_next_row(map[y]);
   }
 
-  player_pos = [5, 3];
+  player_start_pos = [5, 3];
+  player_pos = player_start_pos.slice();
+  player_score = 0;
 
   things = new Array(2);
   things[0] = {p: [3, 2], dt: 60};
@@ -85,9 +89,8 @@ function init() {
     queue.add(things[i], things[i].dt)
   }
 
-  // display.draw(5, 5, "@");
-  // display.drawText(2, 2, "HELLO WORLD");
 
+  draw();
   key_handler = window.addEventListener("keyup", key_up);
 }
 
@@ -181,6 +184,12 @@ function draw() {
     var pos = world_to_screen(player_pos);
     display.draw(pos[0], pos[1], "@", fg, bg);
   }
+
+  {
+    var fg = "#fff";
+    var bg = "#000";
+    display.drawText(0, 0, "%c{" + fg + "}" + player_score.toString(), fg, bg);
+  }
 }
 
 function tick() {
@@ -225,9 +234,14 @@ function key_up(event) {
   }
 
   var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
-  if(map[new_pos[1]][new_pos[0]] == ".") {
+  var new_tile = map[new_pos[1]][new_pos[0]];
+  if(new_tile == "." || new_tile == "o") {
     player_pos[0] += dp[0];
     player_pos[1] += dp[1];
+    player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
+    window.console.log(player_score);
+    window.console.log(player_pos);
+    window.console.log(player_start_pos);
   }
 
   camera_pos = [0, Math.max(0, player_pos[1] - 3)];
