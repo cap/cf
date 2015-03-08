@@ -12,6 +12,7 @@ var player_start_pos;
 var player_pos;
 var player_score;
 var camera_pos;
+var show_title;
 
 var gen_y;
 var gen_state;
@@ -76,9 +77,10 @@ function init() {
     make_next_row(map[y]);
   }
 
-  player_start_pos = [5, 3];
+  player_start_pos = [Math.floor(map_shape[0] / 2), 3];
   player_pos = player_start_pos.slice();
   player_score = 0;
+  show_title = true;
 
   things = new Array(2);
   things[0] = {p: [3, 2], dt: 60};
@@ -203,12 +205,12 @@ function draw() {
     }
   }
 
-  for(var i = 0; i < things.length; ++i) {
-    var fg = "#fff";
-    var bg = "#000";
-    var pos = world_to_screen(things[i].p);
-    display.draw(pos[0], pos[1], "X", fg, bg);
-  }
+  // for(var i = 0; i < things.length; ++i) {
+  //   var fg = "#fff";
+  //   var bg = "#000";
+  //   var pos = world_to_screen(things[i].p);
+  //   display.draw(pos[0], pos[1], "X", fg, bg);
+  // }
 
   {
     var fg = "#fff";
@@ -217,12 +219,18 @@ function draw() {
     display.draw(pos[0], pos[1], "@", fg, bg);
   }
 
-  {
+  if(player_score > 0) {
     var fg = [255, 255, 255];
     var screen_pos = [0, 0];
     var bg = get_bg(screen_to_world(screen_pos));
     display.drawText(
       screen_pos[0], screen_pos[1], "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}" + player_score.toString());
+  }
+
+  if(show_title) {
+    var mid = [Math.floor(screen_shape[0] / 2), Math.floor(screen_shape[1] / 2)];
+    display.drawText(mid[0] - 2, mid[1] - 1, "%c{#fff}COPY");
+    display.drawText(mid[0] - 3, mid[1], "%c{#fff}FROGUE");
   }
 }
 
@@ -265,6 +273,9 @@ function key_up(event) {
   }
   if(event.keyCode == ROT.VK_D) {
     dp[0]++;
+  }
+  if(dp[0] != 0 || dp[1] != 0) {
+    show_title = false;
   }
 
   var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
