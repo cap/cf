@@ -27,6 +27,10 @@ var gen_y;
 var gen_state;
 var gen_state_end;
 
+function in_gutter(x) {
+  return x < gutter_width || x >= map_shape[0] - gutter_width;
+}
+
 function make_next_row(terrain, mover) {
   var dt = 0;
   if(gen_state == "grass") {
@@ -42,20 +46,22 @@ function make_next_row(terrain, mover) {
   } else if(gen_state == "water") {
     for(var x = 0; x < map_shape[0]; ++x) {
       terrain[x] = "~";
-      if(ROT.RNG.getUniform() > .7) {
+      if(!in_gutter(x) && ROT.RNG.getUniform() > .7) {
         terrain[x] = "o";
       }
     }
-    for(var x = 0; x < mover_width; ++x) {
-      if(ROT.RNG.getUniform() > .5) {
-        mover[x] = "-";
-      } else {
-        mover[x] = "~";
-      }
-      if(ROT.RNG.getUniform() > .5) {
-        dt = 60;
-      } else {
-        dt = 90;
+    if(ROT.RNG.getUniform() > .3) {
+      for(var x = 0; x < mover_width; ++x) {
+        if(ROT.RNG.getUniform() > .5) {
+          mover[x] = "-";
+        } else {
+          mover[x] = "~";
+        }
+        if(ROT.RNG.getUniform() > .5) {
+          dt = 60;
+        } else {
+          dt = 90;
+        }
       }
     }
   }
