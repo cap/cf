@@ -134,7 +134,7 @@ function init() {
 
   init_game();
 
-  draw();
+  tick();
   key_handler = window.addEventListener("keyup", key_up);
 }
 
@@ -327,6 +327,13 @@ function tick() {
 }
 
 function key_up(event) {
+  if(event.keyCode == ROT.VK_P) {
+    // var img = document.createElement("img");
+    // img.setAttribute('src', display.getContainer().toDataURL("image/png"));
+    // document.body.appendChild(img);
+    window.open(display.getContainer().toDataURL("image/png"), "_blank");
+  }
+
   var dp = [0, 0];
   if(event.keyCode == ROT.VK_W) {
     dp[1]++;
