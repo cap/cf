@@ -41,7 +41,7 @@ function init() {
     for(var x = 0; x < row.length; ++x) {
       row[x] = ".";
       if(ROT.RNG.getUniform() > .9) {
-        row[x] = "#";
+        row[x] = "*";
       }
     }
   }
@@ -76,7 +76,7 @@ function key_down(event) {
 
 function light_passes(x, y) {
   if(y >= 0 && y < visibility.length && x >= 0 && x < visibility[0].length) {
-    return map[y][x] != '#';
+    return map[y][x] != '*';
   } else {
     return false;
   }
@@ -109,13 +109,20 @@ function draw() {
       var bg = "#000";
       switch(tile) {
       case ".": {
-        if(y % 2 == 0) {
+        if(pos[1] % 2 == 0) {
           fg = [189, 244, 102]; bg = [189, 244, 102];
         } else {
           fg = [182, 236, 94]; bg = [182, 236, 94];
         }
       } break;
-      case "#": fg = [0, 80, 0]; bg = [189, 244, 102]; break;
+      case "*": {
+        if(pos[1] % 2 == 0) {
+          bg = [189, 244, 102];
+        } else {
+          bg = [182, 236, 94];
+        }
+        fg = [0, 80, 0];
+      } break;
       }
       var v = visibility[y][x] * 255;
       fg = ROT.Color.multiply(fg, [v, v, v]);
@@ -181,8 +188,11 @@ function key_up(event) {
     dp[0]++;
   }
 
-  player_pos[0] += dp[0];
-  player_pos[1] += dp[1];
+  var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
+  if(map[new_pos[1]][new_pos[0]] == ".") {
+    player_pos[0] += dp[0];
+    player_pos[1] += dp[1];
+  }
 
   camera_pos = [0, Math.max(0, player_pos[1] - 3)];
 
