@@ -2,12 +2,17 @@ function _game() {
 
 var screen_shape;
 var map_shape;
+var gutter_width;
 var display;
 var map;
 var visibility;
 var queue;
-var things;
+var movers;
+var mover_dts;
+var mover_width;
 var key_handler;
+
+var game_time;
 
 var player_alive;
 var player_start_pos;
@@ -22,19 +27,35 @@ var gen_y;
 var gen_state;
 var gen_state_end;
 
-function make_next_row(row) {
+function make_next_row(terrain, mover) {
+  var dt = 0;
   if(gen_state == "grass") {
     for(var x = 0; x < map_shape[0]; ++x) {
-      row[x] = ".";
+      terrain[x] = ".";
       if(ROT.RNG.getUniform() > .9) {
-        row[x] = "*";
+        terrain[x] = "*";
+      }
+      if(x < gutter_width || x >= map_shape[0] - gutter_width) {
+        terrain[x] = "*";
       }
     }
   } else if(gen_state == "water") {
     for(var x = 0; x < map_shape[0]; ++x) {
-      row[x] = "~";
+      terrain[x] = "~";
       if(ROT.RNG.getUniform() > .7) {
-        row[x] = "o";
+        terrain[x] = "o";
+      }
+    }
+    for(var x = 0; x < mover_width; ++x) {
+      if(ROT.RNG.getUniform() > .5) {
+        mover[x] = "-";
+      } else {
+        mover[x] = "~";
+      }
+      if(ROT.RNG.getUniform() > .5) {
+        dt = 60;
+      } else {
+        dt = 90;
       }
     }
   }
@@ -46,17 +67,20 @@ function make_next_row(row) {
 
     gen_state_end = gen_y + 1 + Math.floor(ROT.RNG.getUniform() * 7);
   }
+  return dt;
 }
 
 function init_game() {
   queue.clear();
+
+  game_time = 0;
 
   gen_y = 0;
   gen_state = "grass";
   gen_state_end = 7;
 
   for(var y = 0; y < map.length; ++y) {
-    make_next_row(map[y]);
+    mover_dts[y] = make_next_row(map[y], movers[y]);
   }
 
   player_alive = true;
@@ -74,8 +98,8 @@ function init() {
 
   // camera shows ~11 whole rows
   screen_shape = [13, 13];
-  // play area is 9 wide
   map_shape = [13, 100];
+  gutter_width = 2;
   camera_pos = [0, 0];
 
 
@@ -94,13 +118,12 @@ function init() {
     visibility[i] = new Array(map_shape[0]);
   }
 
-  things = new Array(2);
-  things[0] = {p: [3, 2], dt: 60};
-  things[1] = {p: [3, 3], dt: 20};
-  things[2] = {p: [3, 4], dt: 30};
-
-  for(var i = 0; i < things.length; ++i) {
-    queue.add(things[i], things[i].dt)
+  mover_width = 1000;
+  movers = new Array(map_shape[1]);
+  mover_dts = new Array(map_shape[1]);
+  for(var i = 0; i < movers.length; ++i) {
+    movers[i] = new Array(mover_width);
+    mover_dts[i] = 0;
   }
 
   init_game();
@@ -154,6 +177,7 @@ function get_bg(pos) {
       bg = [182, 236, 94];
     }
   } break;
+  case "-":
   case "~": {
     bg = [129, 245, 255];
   } break;
@@ -209,19 +233,29 @@ function draw() {
         bg = [129, 245, 255];
         fg = [182, 214, 33];
       } break;
+      case "-": {
+        bg = [129, 245, 255];
+        fg = [141, 83,  80];
+      } break;
       }
       var v = visibility[y][x] * 255;
       fg = ROT.Color.multiply(fg, [v, v, v]);
       bg = ROT.Color.multiply(bg, [v, v, v]);
+      if(tile == "-" || tile == "~") {
+        if(x < gutter_width || x >= screen_shape[0] - gutter_width) {
+          var w = Math.floor(ROT.RNG.getUniform() * 64);
+          bg = ROT.Color.add(bg, [w, w, w]);
+        }
+      }
       var pos = world_to_screen(pos);
       display.draw(pos[0], pos[1], tile, ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
     }
   }
 
-  // for(var i = 0; i < things.length; ++i) {
+  // for(var i = 0; i < movers.length; ++i) {
   //   var fg = "#fff";
   //   var bg = "#000";
-  //   var pos = world_to_screen(things[i].p);
+  //   var pos = world_to_screen(movers[i].p);
   //   display.draw(pos[0], pos[1], "X", fg, bg);
   // }
 
@@ -258,28 +292,31 @@ function draw() {
 }
 
 function tick() {
-  var end_turn = false;
-  queue.add('end_tick', 10);
+  draw();
 
-  while(true) {
-    var thing = queue.get();
-    var time = queue.getTime();
-    if(thing == 'end_tick') {
-      break;
-    } else if(thing == 'end_turn') {
-      end_turn = true;
-    } else {
-      thing.p[0] += 1;
-      queue.add(thing, thing.dt);
+  for(var y = 0; y < map_shape[1]; ++y) {
+    if(mover_dts[y] > 0) {
+      if(player_alive && player_pos[1] == y && game_time % mover_dts[y] == 0) {
+        player_pos[0]--;
+      }
+      var dx = Math.floor(game_time / mover_dts[y]);
+      for(var x = 0; x < map_shape[0]; ++x) {
+        map[y][x] = movers[y][x + dx];
+      }
     }
   }
 
-  draw();
+  if(player_alive) {
+    if(player_pos[0] < gutter_width || player_pos[0] >= map_shape[0] - gutter_width) {
+      player_alive = false;
+    }
+  }
 
-  if(end_turn) {
+  game_time += 10;
+  if(game_time % 60 == 0) {
     key_handler = window.addEventListener("keyup", key_up);
   } else {
-    setTimeout(tick, 10);
+    setTimeout(tick, 5);
   }
 }
 
@@ -303,7 +340,7 @@ function key_up(event) {
     if(player_alive) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = map[new_pos[1]][new_pos[0]];
-      if(new_tile == "." || new_tile == "o" || new_tile == "~") {
+      if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-") {
         player_pos[0] += dp[0];
         player_pos[1] += dp[1];
         player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
