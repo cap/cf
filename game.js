@@ -212,7 +212,7 @@ function draw() {
 
   {
     var fg = "#fff";
-    var bg = "#000";
+    var bg = ROT.Color.toRGB(get_bg(player_pos));
     var pos = world_to_screen(player_pos);
     display.draw(pos[0], pos[1], "@", fg, bg);
   }
