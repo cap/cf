@@ -117,6 +117,38 @@ function world_to_screen(pos) {
   return [pos[0] - camera_pos[0], screen_shape[1] - 1 - (pos[1] - camera_pos[1])];
 }
 
+function screen_to_world(pos) {
+  return [pos[0] + camera_pos[0], screen_shape[1] - 1 - (pos[1] - camera_pos[1])];
+}
+
+function get_bg(pos) {
+  var tile = map[pos[1]][pos[0]];
+  var bg = [0, 0, 0];
+  switch(tile) {
+  case ".": {
+    if(pos[1] % 2 == 0) {
+      bg = [189, 244, 102];
+    } else {
+      bg = [182, 236, 94];
+    }
+  } break;
+  case "*": {
+    if(pos[1] % 2 == 0) {
+      bg = [189, 244, 102];
+    } else {
+      bg = [182, 236, 94];
+    }
+  } break;
+  case "~": {
+    bg = [129, 245, 255];
+  } break;
+  case "o": {
+    bg = [129, 245, 255];
+  } break;
+  }
+  return bg;
+}
+
 function draw() {
   for(var y = 0; y < visibility.length; ++y) {
     var row = visibility[y];
@@ -186,9 +218,11 @@ function draw() {
   }
 
   {
-    var fg = "#fff";
-    var bg = "#000";
-    display.drawText(0, 0, "%c{" + fg + "}" + player_score.toString(), fg, bg);
+    var fg = [255, 255, 255];
+    var screen_pos = [0, 0];
+    var bg = get_bg(screen_to_world(screen_pos));
+    display.drawText(
+      screen_pos[0], screen_pos[1], "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}" + player_score.toString());
   }
 }
 
