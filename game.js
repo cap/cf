@@ -11,6 +11,36 @@ var key_handler;
 var player_pos;
 var camera_pos;
 
+var gen_y;
+var gen_state;
+var gen_state_end;
+
+function make_next_row(row) {
+  if(gen_state == "grass") {
+    for(var x = 0; x < map_shape[0]; ++x) {
+      row[x] = ".";
+      if(ROT.RNG.getUniform() > .9) {
+        row[x] = "*";
+      }
+    }
+  } else if(gen_state == "water") {
+    for(var x = 0; x < map_shape[0]; ++x) {
+      row[x] = "~";
+      if(ROT.RNG.getUniform() > .7) {
+        row[x] = "o";
+      }
+    }
+  }
+  ++gen_y;
+  if(gen_y == gen_state_end) {
+    var dart = ROT.RNG.getUniform();
+    if(dart < .7) gen_state = "grass";
+    else gen_state = "water";
+
+    gen_state_end = gen_y + Math.floor(ROT.RNG.getUniform() * 7);
+  }
+}
+
 function init() {
   window.console.log("bar");
 
@@ -21,6 +51,10 @@ function init() {
   // play area is 9 wide
   map_shape = [13, 100];
   camera_pos = [0, 0];
+
+  gen_y = 0;
+  gen_state = 'grass';
+  gen_state_end = 7;
 
   queue = new ROT.EventQueue();
   display = new ROT.Display({
@@ -37,13 +71,7 @@ function init() {
     visibility[i] = new Array(map_shape[0]);
   }
   for(var y = 0; y < map.length; ++y) {
-    var row = map[y];
-    for(var x = 0; x < row.length; ++x) {
-      row[x] = ".";
-      if(ROT.RNG.getUniform() > .9) {
-        row[x] = "*";
-      }
-    }
+    make_next_row(map[y]);
   }
 
   player_pos = [5, 3];
@@ -121,7 +149,15 @@ function draw() {
         } else {
           bg = [182, 236, 94];
         }
-        fg = [0, 80, 0];
+        fg = [182, 214, 33];
+      } break;
+      case "~": {
+        bg = [129, 245, 255];
+        fg = [129, 245, 255];
+      } break;
+      case "o": {
+        bg = [129, 245, 255];
+        fg = [182, 214, 33];
       } break;
       }
       var v = visibility[y][x] * 255;
