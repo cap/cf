@@ -160,13 +160,20 @@ function init() {
   screen_shape = [13, 13];
   field_shape = [13, 13];
   rows_shape = [1000, 15];
+  var font_size = 50;
+
+  // screen_shape = [75, 75];
+  // field_shape = [75, 75];
+  // rows_shape = [100, 100];
+  // font_size = 10;
+
   gutter_width = 2;
 
   queue = new ROT.EventQueue();
   display = new ROT.Display({
     width: screen_shape[0],
     height: screen_shape[1],
-    fontSize: 50
+    fontSize: font_size
   });
   document.getElementById("display").appendChild(display.getContainer());
 
