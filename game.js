@@ -15,6 +15,9 @@ var key_handler;
 
 var game_time;
 
+var kestrel_active;
+var kestrel_pos;
+
 var player_alive;
 var player_start_pos;
 var player_pos;
@@ -118,6 +121,9 @@ function init_game() {
   gen_state = "grass";
   gen_state_end = 5;
   camera_pos = [0, 0];
+
+  kestrel_active = false;
+  kestrel_pos = [0, 0];
 
   player_alive = true;
   player_start_pos = [Math.floor(field_shape[0] / 2), 3];
@@ -249,7 +255,11 @@ function get_bg(pos) {
 
 function get_tile(pos) {
   pos = world_to_field(pos);
-  return field[pos[1]][pos[0]];
+  if(pos[0] < 0 || pos[0] >= field_shape[0] || pos[1] < 0 || pos[1] >= field_shape[1]) {
+    return ' ';
+  } else {
+    return field[pos[1]][pos[0]];
+  }
 }
 
 function draw() {
@@ -337,6 +347,14 @@ function draw() {
   //   display.draw(pos[0], pos[1], "X", fg, bg);
   // }
 
+  if(kestrel_active) {
+    var fg = ROT.Color.toRGB([141, 83,  80]);
+    var tile = "K";
+    var bg = ROT.Color.toRGB(get_bg(kestrel_pos));
+    var pos = world_to_screen(kestrel_pos);
+    display.draw(pos[0], pos[1], tile, fg, bg);
+  }
+
   {
     var fg = "#fff";
     var tile = "@";
@@ -395,6 +413,11 @@ function tick() {
     }
   }
 
+  if(kestrel_active) {
+    kestrel_pos[0] = player_pos[0];
+    if(kestrel_pos[1] > player_pos[1]) kestrel_pos[1]--;
+  }
+
   if(player_alive) {
     if(player_pos[0] < gutter_width || player_pos[0] >= field_shape[0] - gutter_width) {
       player_alive = false;
@@ -402,6 +425,11 @@ function tick() {
     var tile = get_tile(player_pos);
     if(tile == "[" || tile == "]") {
       player_alive = false;
+      player_narration = "SMUSH";
+    }
+    if(kestrel_active && kestrel_pos[1] == player_pos[1]) {
+      player_alive = false;
+      player_narration = "KESTREL";
     }
   }
 
@@ -447,11 +475,17 @@ function key_up(event) {
         player_pos[0] += dp[0];
         player_pos[1] += dp[1];
         player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
-        if(player_pos[1] <= camera_pos[1]) {
-          player_alive = false;
+        if(!kestrel_active && player_pos[1] <= camera_pos[1]) {
+          kestrel_active = true;
+          kestrel_pos = [player_pos[0], player_pos[1] + screen_shape[1]];
         }
-        if(new_tile == "~" || new_tile == "[" || new_tile == "]") {
+        if(new_tile == "~") {
           player_alive = false;
+          player_narration = "SPLASH";
+        }
+        if(new_tile == "[" || new_tile == "]") {
+          player_alive = false;
+          player_narration = "SWIPE";
         }
       }
     } else {
