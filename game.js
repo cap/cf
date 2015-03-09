@@ -167,17 +167,19 @@ function init() {
 
   tick();
   key_handler = window.addEventListener("keyup", key_up);
+  window.onkeydown = key_down;
 }
 
 function key_down(event) {
   var code = event.keyCode;
-  var vk = "?";
-  for(var name in ROT) {
-    if(ROT[name] == code && name.indexOf("VK_") == 0) {
-      vk = name;
-    }
-  }
-  display.drawText(2, 3, vk);
+  if(code == ROT.VK_SPACE) return false;
+  // var vk = "?";
+  // for(var name in ROT) {
+  //   if(ROT[name] == code && name.indexOf("VK_") == 0) {
+  //     vk = name;
+  //   }
+  // }
+  // display.drawText(2, 3, vk);
 }
 
 function light_passes(x, y) {
