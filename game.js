@@ -100,8 +100,14 @@ function gen_row() {
     }
   } else if(gen_state == "railroad") {
     dt = 10;
+    if(ROT.RNG.getUniform() < .5) {
+      dt *= -1;
+    }
     var len = 20;
     var start = Math.floor(5 + ROT.RNG.getUniform() * 60);
+    if(dt < 0) {
+      start = Math.max(0, rows_shape[0] - start - len);
+    }
     for(var x = 0; x < rows_shape[0]; ++x) {
       if(x >= start && x < start + len) {
         row[x] = "T";
