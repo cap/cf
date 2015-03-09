@@ -31,7 +31,8 @@ function in_gutter(x) {
   return x < gutter_width || x >= map_shape[0] - gutter_width;
 }
 
-function gen_row(row) {
+function gen_row() {
+  var row = rows[gen_y];
   var dt = 0;
   if(gen_state == "grass") {
     for(var x = 0; x < map_shape[0]; ++x) {
@@ -68,6 +69,7 @@ function gen_row(row) {
       }
     }
   }
+  row_dts[gen_y] = dt;
   ++gen_y;
   if(gen_y == gen_state_end) {
     var dart = ROT.RNG.getUniform();
@@ -76,7 +78,6 @@ function gen_row(row) {
 
     gen_state_end = gen_y + 1 + Math.floor(ROT.RNG.getUniform() * 7);
   }
-  return dt;
 }
 
 function init_game() {
@@ -319,8 +320,7 @@ function draw() {
 
 function tick() {
   while(gen_y - camera_pos[1] < screen_shape[1]) {
-    var dt = gen_row(rows[gen_y]);
-    row_dts[gen_y] = dt;
+    gen_row();
   }
 
   for(var y = 0; y < map_shape[1]; ++y) {
