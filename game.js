@@ -8,8 +8,8 @@ var map;
 var visibility;
 var queue;
 var movers;
-var mover_dts;
-var mover_width;
+var row_dts;
+var row_width;
 var key_handler;
 
 var game_time;
@@ -31,31 +31,31 @@ function in_gutter(x) {
   return x < gutter_width || x >= map_shape[0] - gutter_width;
 }
 
-function make_next_row(terrain, mover) {
+function gen_row(row) {
   var dt = 0;
   if(gen_state == "grass") {
     for(var x = 0; x < map_shape[0]; ++x) {
-      terrain[x] = ".";
+      row[x] = ".";
       if(gen_y == 0 || ROT.RNG.getUniform() > .9) {
-        terrain[x] = "*";
+        row[x] = "*";
       }
       if(x < gutter_width || x >= map_shape[0] - gutter_width) {
-        terrain[x] = "*";
+        row[x] = "*";
       }
     }
   } else if(gen_state == "water") {
     for(var x = 0; x < map_shape[0]; ++x) {
-      terrain[x] = "~";
+      row[x] = "~";
       if(!in_gutter(x) && ROT.RNG.getUniform() > .7) {
-        terrain[x] = "o";
+        row[x] = "o";
       }
     }
     if(ROT.RNG.getUniform() > .3) {
-      for(var x = 0; x < mover_width; ++x) {
+      for(var x = 0; x < row_width; ++x) {
         if(ROT.RNG.getUniform() > .5) {
-          mover[x] = "-";
+          row[x] = "-";
         } else {
-          mover[x] = "~";
+          row[x] = "~";
         }
         if(ROT.RNG.getUniform() > .5) {
           dt = 60;
@@ -89,7 +89,7 @@ function init_game() {
   gen_state_end = 7;
 
   for(var y = 0; y < map.length; ++y) {
-    mover_dts[y] = make_next_row(map[y], movers[y]);
+    row_dts[y] = gen_row(rows[y]);
   }
 
   player_alive = true;
@@ -127,12 +127,12 @@ function init() {
     visibility[i] = new Array(map_shape[0]);
   }
 
-  mover_width = 1000;
-  movers = new Array(map_shape[1]);
-  mover_dts = new Array(map_shape[1]);
-  for(var i = 0; i < movers.length; ++i) {
-    movers[i] = new Array(mover_width);
-    mover_dts[i] = 0;
+  row_width = 1000;
+  rows = new Array(map_shape[1]);
+  row_dts = new Array(map_shape[1]);
+  for(var i = 0; i < rows.length; ++i) {
+    rows[i] = new Array(row_width);
+    row_dts[i] = 0;
   }
 
   init_game();
@@ -261,10 +261,10 @@ function draw() {
     }
   }
 
-  // for(var i = 0; i < movers.length; ++i) {
+  // for(var i = 0; i < rows.length; ++i) {
   //   var fg = "#fff";
   //   var bg = "#000";
-  //   var pos = world_to_screen(movers[i].p);
+  //   var pos = world_to_screen(rows[i].p);
   //   display.draw(pos[0], pos[1], "X", fg, bg);
   // }
 
@@ -301,18 +301,17 @@ function draw() {
 }
 
 function tick() {
-  draw();
-
   for(var y = 0; y < map_shape[1]; ++y) {
-    if(mover_dts[y] != 0) {
-      if(player_alive && player_pos[1] == y && game_time % mover_dts[y] == 0) {
-        player_pos[0] -= mover_dts[y] / Math.abs(mover_dts[y]);
-      }
-      var dx = Math.floor(game_time / mover_dts[y]);
-      while(dx < 0) dx += mover_width;
-      for(var x = 0; x < map_shape[0]; ++x) {
-        map[y][x] = movers[y][(x + dx) % mover_width];
-      }
+    if(player_alive && player_pos[1] == y && game_time % row_dts[y] == 0) {
+      player_pos[0] -= row_dts[y] / Math.abs(row_dts[y]);
+    }
+    var dx = 0;
+    if(row_dts[y] != 0) {
+      dx = Math.floor(game_time / row_dts[y]);
+      while(dx < 0) dx += row_width;
+    }
+    for(var x = 0; x < map_shape[0]; ++x) {
+      map[y][x] = rows[y][(x + dx) % row_width];
     }
   }
 
@@ -321,6 +320,8 @@ function tick() {
       player_alive = false;
     }
   }
+
+  draw();
 
   game_time += 10;
   if(game_time % 60 == 0) {
