@@ -24,6 +24,9 @@ var player_score;
 var player_narration;
 
 var camera_pos;
+var camera_dt;
+var camera_t;
+
 var show_title;
 
 var gen_y;
@@ -41,10 +44,10 @@ function gen_row() {
   if(gen_state == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
-      if(gen_y == 0 || ROT.RNG.getUniform() > .9) {
+      if(ROT.RNG.getUniform() > .9) {
         row[x] = "*";
       }
-      if(x < gutter_width || x >= field_shape[0] - gutter_width) {
+      if(gen_y == 0 || in_gutter(x)) {
         row[x] = "*";
       }
     }
@@ -135,7 +138,9 @@ function init_game() {
   gen_y = 0;
   gen_state = "grass";
   gen_state_end = 5;
-  camera_pos = [0, 0];
+  camera_pos = [0, -1];
+  camera_dt = 120;
+  camera_t = 0;
 
   kestrel_active = false;
   kestrel_pos = [0, 0];
@@ -421,6 +426,12 @@ function draw() {
 }
 
 function tick() {
+  if((game_time - camera_t) % camera_dt == 0) {
+    if(player_alive && player_pos[1] > camera_pos[1]) {
+      camera_pos[1]++;
+    }
+  }
+
   while(gen_y - camera_pos[1] < screen_shape[1]) {
     gen_row();
   }
@@ -444,6 +455,11 @@ function tick() {
       var row_pos = field_to_rows([x + dx, y]);
       field[y][x] = rows[row_pos[1]][row_pos[0]];
     }
+  }
+
+  if(!kestrel_active && player_pos[1] <= camera_pos[1]) {
+    kestrel_active = true;
+    kestrel_pos = [player_pos[0], player_pos[1] + screen_shape[1]];
   }
 
   if(kestrel_active) {
@@ -495,6 +511,7 @@ function key_up(event) {
   var wait = (event.keyCode == ROT.VK_SPACE);
 
   if(!(up || down || left || right || wait)) return;
+  show_title = false;
 
   var dp = [0, 0];
   if(up) dp[1]++;
@@ -503,8 +520,6 @@ function key_up(event) {
   if(right) dp[0]++;
 
   if(dp[0] != 0 || dp[1] != 0) {
-    show_title = false;
-
     if(player_alive) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = get_tile(new_pos);
@@ -513,10 +528,6 @@ function key_up(event) {
           player_pos[0] += dp[0];
           player_pos[1] += dp[1];
           player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
-          if(!kestrel_active && player_pos[1] <= camera_pos[1]) {
-            kestrel_active = true;
-            kestrel_pos = [player_pos[0], player_pos[1] + screen_shape[1]];
-          }
           if(new_tile == "~") {
             player_alive = false;
             player_narration = "WATER";
@@ -531,12 +542,13 @@ function key_up(event) {
           }
         }
       }
+      camera_pos[1] = Math.max(camera_pos[1], player_pos[1] - 3);
     } else {
       init_game();
     }
   }
 
-  camera_pos[1] = Math.max(camera_pos[1], player_pos[1] - 3);
+
 
   window.removeEventListener("keyup", key_up);
   tick();
