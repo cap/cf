@@ -32,7 +32,7 @@ function in_gutter(x) {
 }
 
 function gen_row() {
-  var row = rows[gen_y];
+  var row = rows[gen_y % rows_shape[1]];
   var dt = 0;
   if(gen_state == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
@@ -105,7 +105,7 @@ function init() {
   // camera shows ~11 whole rows
   screen_shape = [13, 13];
   field_shape = [13, 13];
-  rows_shape = [1000, 100];
+  rows_shape = [1000, 15];
   gutter_width = 2;
   camera_pos = [0, 0];
 
