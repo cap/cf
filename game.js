@@ -69,7 +69,7 @@ function gen_row() {
       }
     }
   }
-  row_dts[gen_y] = dt;
+  row_dts[gen_y % rows_shape[1]] = dt;
   ++gen_y;
   if(gen_y == gen_state_end) {
     var dart = ROT.RNG.getUniform();
@@ -324,14 +324,17 @@ function tick() {
   }
 
   for(var y = 0; y < field_shape[1]; ++y) {
-    // if(player_alive && player_pos[1] == y && game_time % row_dts[y] == 0) {
-    //   player_pos[0] -= row_dts[y] / Math.abs(row_dts[y]);
-    // }
+    var world_pos = field_to_world([0, y]);
+    var row_pos = world_to_rows(world_pos);
+    var dt = row_dts[row_pos[1]];
+    if(player_alive && player_pos[1] == world_pos[1] && game_time % dt == 0) {
+      player_pos[0] -= dt / Math.abs(dt);
+    }
     var dx = 0;
-    // if(row_dts[y] != 0) {
-    //   dx = Math.floor(game_time / row_dts[y]);
-    //   while(dx < 0) dx += rows_shape[0];
-    // }
+    if(dt != 0) {
+      dx = Math.floor(game_time / dt);
+      while(dx < 0) dx += rows_shape[0];
+    }
     for(var x = 0; x < field_shape[0]; ++x) {
       var row_pos = field_to_rows([x + dx, y]);
       field[y][x] = rows[row_pos[1]][row_pos[0]];
