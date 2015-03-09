@@ -6,7 +6,6 @@ var gutter_width;
 var display;
 var field;
 var visibility;
-var queue;
 var rows;
 var row_dts;
 var row_move_player;
@@ -131,8 +130,6 @@ function gen_row() {
 }
 
 function init_game() {
-  queue.clear();
-
   game_time = 0;
 
   gen_y = 0;
@@ -169,7 +166,6 @@ function init() {
 
   gutter_width = 2;
 
-  queue = new ROT.EventQueue();
   display = new ROT.Display({
     width: screen_shape[0],
     height: screen_shape[1],
@@ -542,8 +538,6 @@ function key_up(event) {
 
   camera_pos[1] = Math.max(camera_pos[1], player_pos[1] - 3);
 
-  var time = queue.getTime();
-  queue.add('end_turn', 60);
   window.removeEventListener("keyup", key_up);
   tick();
 }
