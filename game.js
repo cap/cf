@@ -88,10 +88,6 @@ function init_game() {
   gen_state = "grass";
   gen_state_end = 7;
 
-  for(var y = 0; y < map_shape[1]; ++y) {
-    row_dts[y] = gen_row(rows[y]);
-  }
-
   player_alive = true;
   player_start_pos = [Math.floor(map_shape[0] / 2), 3];
   player_pos = player_start_pos.slice();
@@ -107,7 +103,7 @@ function init() {
 
   // camera shows ~11 whole rows
   screen_shape = [13, 13];
-  map_shape = [13, 100];
+  map_shape = [13, 13];
   rows_shape = [1000, 100];
   gutter_width = 2;
   camera_pos = [0, 0];
@@ -169,15 +165,22 @@ function screen_to_world(pos) {
 }
 
 function world_to_rows(pos) {
-  return [pos[0], pos[1] % rows_shape[1]];
+  return [pos[0] % rows_shape[0], pos[1] % rows_shape[1]];
 }
 
 function world_to_field(pos) {
-  return [pos[0] - camera_pos[0], pos[1] - camera_pos[0]];
+  return [pos[0] - camera_pos[0], pos[1] - camera_pos[1]];
+}
+
+function field_to_world(pos) {
+  return [pos[0] + camera_pos[0], pos[1] + camera_pos[1]];
+}
+
+function field_to_rows(pos) {
+  return world_to_rows(field_to_world(pos));
 }
 
 function get_bg(pos) {
-  pos = world_to_field(pos);
   var tile = get_tile(pos);
   var bg = [0, 0, 0];
   switch(tile) {
@@ -228,7 +231,7 @@ function draw() {
 
   for(var y = 0; y < screen_shape[1]; ++y) {
     for(var x = 0; x < screen_shape[0]; ++x) {
-      var pos = [camera_pos[0] + x, camera_pos[1] + y];
+      var pos = field_to_world([x, y]);
       var tile = get_tile(pos);
       var fg = "#fff";
       var bg = "#000";
@@ -315,17 +318,23 @@ function draw() {
 }
 
 function tick() {
+  while(gen_y - camera_pos[1] < screen_shape[1]) {
+    var dt = gen_row(rows[gen_y]);
+    row_dts[gen_y] = dt;
+  }
+
   for(var y = 0; y < map_shape[1]; ++y) {
-    if(player_alive && player_pos[1] == y && game_time % row_dts[y] == 0) {
-      player_pos[0] -= row_dts[y] / Math.abs(row_dts[y]);
-    }
+    // if(player_alive && player_pos[1] == y && game_time % row_dts[y] == 0) {
+    //   player_pos[0] -= row_dts[y] / Math.abs(row_dts[y]);
+    // }
     var dx = 0;
-    if(row_dts[y] != 0) {
-      dx = Math.floor(game_time / row_dts[y]);
-      while(dx < 0) dx += rows_shape[0];
-    }
+    // if(row_dts[y] != 0) {
+    //   dx = Math.floor(game_time / row_dts[y]);
+    //   while(dx < 0) dx += rows_shape[0];
+    // }
     for(var x = 0; x < map_shape[0]; ++x) {
-      map[y][x] = rows[y][(x + dx) % rows_shape[0]];
+      var row_pos = field_to_rows([x + dx, y]);
+      map[y][x] = rows[row_pos[1]][row_pos[0]];
     }
   }
 
@@ -396,4 +405,6 @@ function key_up(event) {
 return init;
 }
 
-window.onload = function() { _game()(); }
+var __game = _game();
+
+window.onload = function() { __game(); }
