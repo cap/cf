@@ -9,7 +9,7 @@ var visibility;
 var queue;
 var movers;
 var row_dts;
-var row_width;
+var rows_shape;
 var key_handler;
 
 var game_time;
@@ -51,7 +51,7 @@ function gen_row(row) {
       }
     }
     if(ROT.RNG.getUniform() > .3) {
-      for(var x = 0; x < row_width; ++x) {
+      for(var x = 0; x < rows_shape[0]; ++x) {
         if(ROT.RNG.getUniform() > .5) {
           row[x] = "-";
         } else {
@@ -88,7 +88,7 @@ function init_game() {
   gen_state = "grass";
   gen_state_end = 7;
 
-  for(var y = 0; y < map.length; ++y) {
+  for(var y = 0; y < map_shape[1]; ++y) {
     row_dts[y] = gen_row(rows[y]);
   }
 
@@ -108,6 +108,7 @@ function init() {
   // camera shows ~11 whole rows
   screen_shape = [13, 13];
   map_shape = [13, 100];
+  rows_shape = [1000, 100];
   gutter_width = 2;
   camera_pos = [0, 0];
 
@@ -122,16 +123,15 @@ function init() {
 
   map = new Array(map_shape[1]);
   visibility = new Array(map_shape[1]);
-  for(var i = 0; i < map.length; ++i) {
+  for(var i = 0; i < map_shape[1]; ++i) {
     map[i] = new Array(map_shape[0]);
     visibility[i] = new Array(map_shape[0]);
   }
 
-  row_width = 1000;
-  rows = new Array(map_shape[1]);
-  row_dts = new Array(map_shape[1]);
-  for(var i = 0; i < rows.length; ++i) {
-    rows[i] = new Array(row_width);
+  rows = new Array(rows_shape[1]);
+  row_dts = new Array(rows_shape[1]);
+  for(var i = 0; i < rows_shape[0]; ++i) {
+    rows[i] = new Array(rows_shape[0]);
     row_dts[i] = 0;
   }
 
@@ -308,10 +308,10 @@ function tick() {
     var dx = 0;
     if(row_dts[y] != 0) {
       dx = Math.floor(game_time / row_dts[y]);
-      while(dx < 0) dx += row_width;
+      while(dx < 0) dx += rows_shape[0];
     }
     for(var x = 0; x < map_shape[0]; ++x) {
-      map[y][x] = rows[y][(x + dx) % row_width];
+      map[y][x] = rows[y][(x + dx) % rows_shape[0]];
     }
   }
 
