@@ -168,8 +168,17 @@ function screen_to_world(pos) {
   return [pos[0] + camera_pos[0], screen_shape[1] - 1 - (pos[1] - camera_pos[1])];
 }
 
+function world_to_rows(pos) {
+  return [pos[0], pos[1] % rows_shape[1]];
+}
+
+function world_to_field(pos) {
+  return [pos[0] - camera_pos[0], pos[1] - camera_pos[0]];
+}
+
 function get_bg(pos) {
-  var tile = map[pos[1]][pos[0]];
+  pos = world_to_field(pos);
+  var tile = get_tile(pos);
   var bg = [0, 0, 0];
   switch(tile) {
   case ".": {
@@ -197,6 +206,11 @@ function get_bg(pos) {
   return bg;
 }
 
+function get_tile(pos) {
+  pos = world_to_field(pos);
+  return map[pos[1]][pos[0]];
+}
+
 function draw() {
   for(var y = 0; y < visibility.length; ++y) {
     var row = visibility[y];
@@ -215,7 +229,7 @@ function draw() {
   for(var y = 0; y < screen_shape[1]; ++y) {
     for(var x = 0; x < screen_shape[0]; ++x) {
       var pos = [camera_pos[0] + x, camera_pos[1] + y];
-      var tile = map[pos[1]][pos[0]];
+      var tile = get_tile(pos);
       var fg = "#fff";
       var bg = "#000";
       switch(tile) {
@@ -357,7 +371,7 @@ function key_up(event) {
 
     if(player_alive) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
-      var new_tile = map[new_pos[1]][new_pos[0]];
+      var new_tile = get_tile(new_pos);
       if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-") {
         player_pos[0] += dp[0];
         player_pos[1] += dp[1];
