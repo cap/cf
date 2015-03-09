@@ -455,11 +455,11 @@ function tick() {
     var tile = get_tile(player_pos);
     if(tile == "[" || tile == "]") {
       player_alive = false;
-      player_narration = "SMUSH";
+      player_narration = "CAR";
     }
     if(tile == "T") {
       player_alive = false;
-      player_narration = "SPLAT";
+      player_narration = "TRAIN";
     }
     if(kestrel_active && kestrel_pos[1] == player_pos[1]) {
       player_alive = false;
@@ -516,11 +516,11 @@ function key_up(event) {
           }
           if(new_tile == "~") {
             player_alive = false;
-            player_narration = "SPLASH";
+            player_narration = "WATER";
           }
           if(new_tile == "[" || new_tile == "]") {
             player_alive = false;
-            player_narration = "SWIPE";
+            player_narration = "CAR";
           }
           if(new_tile == "T") {
             player_alive = false;
