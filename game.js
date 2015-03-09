@@ -117,6 +117,7 @@ function init_game() {
   gen_y = 0;
   gen_state = "grass";
   gen_state_end = 5;
+  camera_pos = [0, 0];
 
   player_alive = true;
   player_start_pos = [Math.floor(field_shape[0] / 2), 3];
@@ -136,8 +137,6 @@ function init() {
   field_shape = [13, 13];
   rows_shape = [1000, 15];
   gutter_width = 2;
-  camera_pos = [0, 0];
-
 
   queue = new ROT.EventQueue();
   display = new ROT.Display({
@@ -424,19 +423,20 @@ function key_up(event) {
     window.open(display.getContainer().toDataURL("image/png"), "_blank");
   }
 
+  var up = (event.keyCode == ROT.VK_W);
+  var down = (event.keyCode == ROT.VK_S);
+  var left = (event.keyCode == ROT.VK_A);
+  var right = (event.keyCode == ROT.VK_D);
+  var wait = (event.keyCode == ROT.VK_SPACE);
+
+  if(!(up || down || left || right || wait)) return;
+
   var dp = [0, 0];
-  if(event.keyCode == ROT.VK_W) {
-    dp[1]++;
-  }
-  if(event.keyCode == ROT.VK_S) {
-    dp[1]--;
-  }
-  if(event.keyCode == ROT.VK_A) {
-    dp[0]--;
-  }
-  if(event.keyCode == ROT.VK_D) {
-    dp[0]++;
-  }
+  if(up) dp[1]++;
+  if(down) dp[1]--;
+  if(left) dp[0]--;
+  if(right) dp[0]++;
+
   if(dp[0] != 0 || dp[1] != 0) {
     show_title = false;
 
@@ -447,6 +447,9 @@ function key_up(event) {
         player_pos[0] += dp[0];
         player_pos[1] += dp[1];
         player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
+        if(player_pos[1] <= camera_pos[1]) {
+          player_alive = false;
+        }
         if(new_tile == "~" || new_tile == "[" || new_tile == "]") {
           player_alive = false;
         }
@@ -456,7 +459,7 @@ function key_up(event) {
     }
   }
 
-  camera_pos = [0, Math.max(0, player_pos[1] - 3)];
+  camera_pos[1] = Math.max(camera_pos[1], player_pos[1] - 3);
 
   var time = queue.getTime();
   queue.add('end_turn', 60);
