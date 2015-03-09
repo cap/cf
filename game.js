@@ -9,6 +9,7 @@ var visibility;
 var queue;
 var rows;
 var row_dts;
+var row_move_player;
 var rows_shape;
 var key_handler;
 
@@ -34,6 +35,7 @@ function in_gutter(x) {
 function gen_row() {
   var row = rows[gen_y % rows_shape[1]];
   var dt = 0;
+  var move_player = false;
   if(gen_state == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
@@ -52,31 +54,58 @@ function gen_row() {
       }
     }
     if(ROT.RNG.getUniform() > .3) {
+      move_player = true;
+      if(ROT.RNG.getUniform() > .5) {
+        dt = 60;
+      } else {
+        dt = 90;
+      }
+      if(ROT.RNG.getUniform() < .5) {
+        dt *= -1;
+      }
       for(var x = 0; x < rows_shape[0]; ++x) {
         if(ROT.RNG.getUniform() > .5) {
           row[x] = "-";
         } else {
           row[x] = "~";
         }
-        if(ROT.RNG.getUniform() > .5) {
-          dt = 60;
+      }
+    }
+  } else if(gen_state == "road") {
+    if(ROT.RNG.getUniform() > .5) {
+      dt = 60;
+    } else {
+      dt = 90;
+    }
+    if(ROT.RNG.getUniform() < .5) {
+      dt *= -1;
+    }
+    var skip = 0;
+    for(var x = 0; x < rows_shape[0]; ++x) {
+      skip--;
+      if(skip > 0 || ROT.RNG.getUniform() > .5) {
+        row[x] = "_";
+      } else {
+        if(dt < 0) {
+          row[x] = "]";
+          skip = 3;
         } else {
-          dt = 90;
-        }
-        if(ROT.RNG.getUniform() < .5) {
-          dt *= -1;
+          row[x] = "[";
+          skip = 3;
         }
       }
     }
   }
   row_dts[gen_y % rows_shape[1]] = dt;
+  row_move_player[gen_y % rows_shape[1]] = move_player;
   ++gen_y;
   if(gen_y == gen_state_end) {
     var dart = ROT.RNG.getUniform();
     if(dart < .5) gen_state = "grass";
-    else gen_state = "water";
+    else if(dart < .75) gen_state = "water";
+    else gen_state = "road";
 
-    gen_state_end = gen_y + 1 + Math.floor(ROT.RNG.getUniform() * 7);
+    gen_state_end = gen_y + 1 + Math.floor(ROT.RNG.getUniform() * 3);
   }
 }
 
@@ -87,7 +116,7 @@ function init_game() {
 
   gen_y = 0;
   gen_state = "grass";
-  gen_state_end = 7;
+  gen_state_end = 5;
 
   player_alive = true;
   player_start_pos = [Math.floor(field_shape[0] / 2), 3];
@@ -127,9 +156,11 @@ function init() {
 
   rows = new Array(rows_shape[1]);
   row_dts = new Array(rows_shape[1]);
+  row_move_player = new Array(rows_shape[1]);
   for(var i = 0; i < rows_shape[0]; ++i) {
     rows[i] = new Array(rows_shape[0]);
     row_dts[i] = 0;
+    row_move_player[i] = false;
   }
 
   init_game();
@@ -206,6 +237,11 @@ function get_bg(pos) {
   case "o": {
     bg = [129, 245, 255];
   } break;
+  case "_":
+  case "]":
+  case "[": {
+    bg = [82, 88, 101];
+  } break;
   }
   return bg;
 }
@@ -234,6 +270,7 @@ function draw() {
     for(var x = 0; x < screen_shape[0]; ++x) {
       var pos = field_to_world([x, y]);
       var tile = get_tile(pos);
+      var display_tile = tile;
       var fg = "#fff";
       var bg = "#000";
       switch(tile) {
@@ -250,7 +287,7 @@ function draw() {
         } else {
           bg = [182, 236, 94];
         }
-        fg = [182, 214, 33];
+        fg = [130, 153, 31];
       } break;
       case "~": {
         bg = [129, 245, 255];
@@ -258,11 +295,24 @@ function draw() {
       } break;
       case "o": {
         bg = [129, 245, 255];
-        fg = [182, 214, 33];
+        fg = [30, 209, 118]; //[17, 181, 94];
       } break;
       case "-": {
         bg = [129, 245, 255];
         fg = [141, 83,  80];
+      } break;
+      case "_": {
+        bg = [82, 88, 101];
+        fg = [82, 88, 101];
+        // if(pos[0] % 2 == 0) {
+        //   display_tile = "_";
+        //   fg = [125, 135, 154];
+        // }
+      } break;
+      case "]":
+      case "[": {
+        bg = [82, 88, 101];
+        fg = [147, 97,  255];
       } break;
       }
       var v = visibility[y][x] * 255;
@@ -275,7 +325,7 @@ function draw() {
         }
       }
       var pos = world_to_screen(pos);
-      display.draw(pos[0], pos[1], tile, ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
+      display.draw(pos[0], pos[1], display_tile, ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
     }
   }
 
@@ -327,8 +377,11 @@ function tick() {
     var world_pos = field_to_world([0, y]);
     var row_pos = world_to_rows(world_pos);
     var dt = row_dts[row_pos[1]];
-    if(player_alive && player_pos[1] == world_pos[1] && game_time % dt == 0) {
-      player_pos[0] -= dt / Math.abs(dt);
+    var move_player = row_move_player[row_pos[1]];
+    if(move_player) {
+      if(player_alive && player_pos[1] == world_pos[1] && game_time % dt == 0) {
+        player_pos[0] -= dt / Math.abs(dt);
+      }
     }
     var dx = 0;
     if(dt != 0) {
@@ -343,6 +396,10 @@ function tick() {
 
   if(player_alive) {
     if(player_pos[0] < gutter_width || player_pos[0] >= field_shape[0] - gutter_width) {
+      player_alive = false;
+    }
+    var tile = get_tile(player_pos);
+    if(tile == "[" || tile == "]") {
       player_alive = false;
     }
   }
@@ -384,11 +441,11 @@ function key_up(event) {
     if(player_alive) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = get_tile(new_pos);
-      if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-") {
+      if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]") {
         player_pos[0] += dp[0];
         player_pos[1] += dp[1];
         player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
-        if(new_tile == "~") {
+        if(new_tile == "~" || new_tile == "[" || new_tile == "]") {
           player_alive = false;
         }
       }
