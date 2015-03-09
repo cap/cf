@@ -98,13 +98,25 @@ function gen_row() {
         }
       }
     }
+  } else if(gen_state == "railroad") {
+    dt = 10;
+    var len = 20;
+    var start = Math.floor(5 + ROT.RNG.getUniform() * 60);
+    for(var x = 0; x < rows_shape[0]; ++x) {
+      if(x >= start && x < start + len) {
+        row[x] = "T";
+      } else {
+        row[x] = "=";
+      }
+    }
   }
   row_dts[gen_y % rows_shape[1]] = dt;
   row_move_player[gen_y % rows_shape[1]] = move_player;
   ++gen_y;
   if(gen_y == gen_state_end) {
     var dart = ROT.RNG.getUniform();
-    if(dart < .5) gen_state = "grass";
+    if(dart < .25) gen_state = "grass";
+    if(dart < .50) gen_state = "railroad";
     else if(dart < .75) gen_state = "water";
     else gen_state = "road";
 
@@ -249,6 +261,10 @@ function get_bg(pos) {
   case "[": {
     bg = [82, 88, 101];
   } break;
+  case "=":
+  case "T": {
+    bg = [82, 88, 101];
+  } break;
   }
   return bg;
 }
@@ -324,6 +340,14 @@ function draw() {
       case "[": {
         bg = [82, 88, 101];
         fg = [147, 97,  255];
+      } break;
+      case "=": {
+        bg = [82, 88, 101];
+        fg = [125, 135, 154];
+      } break;
+      case "T": {
+        bg = [82, 88, 101];
+        fg = [129, 245, 255];
       } break;
       }
       var v = visibility[y][x] * 255;
@@ -427,6 +451,10 @@ function tick() {
       player_alive = false;
       player_narration = "SMUSH";
     }
+    if(tile == "T") {
+      player_alive = false;
+      player_narration = "SPLAT";
+    }
     if(kestrel_active && kestrel_pos[1] == player_pos[1]) {
       player_alive = false;
       player_narration = "KESTREL";
@@ -472,7 +500,7 @@ function key_up(event) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = get_tile(new_pos);
       if(!in_gutter(new_pos[0]) || row_move_player[world_to_rows(new_pos)[1]]) {
-        if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]") {
+        if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]" || new_tile == "=" || new_tile == "T") {
           player_pos[0] += dp[0];
           player_pos[1] += dp[1];
           player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
@@ -487,6 +515,10 @@ function key_up(event) {
           if(new_tile == "[" || new_tile == "]") {
             player_alive = false;
             player_narration = "SWIPE";
+          }
+          if(new_tile == "T") {
+            player_alive = false;
+            player_narration = "TRAIN";
           }
         }
       }
