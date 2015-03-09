@@ -1,10 +1,10 @@
 function _game() {
 
 var screen_shape;
-var map_shape;
+var field_shape;
 var gutter_width;
 var display;
-var map;
+var field;
 var visibility;
 var queue;
 var rows;
@@ -28,24 +28,24 @@ var gen_state;
 var gen_state_end;
 
 function in_gutter(x) {
-  return x < gutter_width || x >= map_shape[0] - gutter_width;
+  return x < gutter_width || x >= field_shape[0] - gutter_width;
 }
 
 function gen_row() {
   var row = rows[gen_y];
   var dt = 0;
   if(gen_state == "grass") {
-    for(var x = 0; x < map_shape[0]; ++x) {
+    for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
       if(gen_y == 0 || ROT.RNG.getUniform() > .9) {
         row[x] = "*";
       }
-      if(x < gutter_width || x >= map_shape[0] - gutter_width) {
+      if(x < gutter_width || x >= field_shape[0] - gutter_width) {
         row[x] = "*";
       }
     }
   } else if(gen_state == "water") {
-    for(var x = 0; x < map_shape[0]; ++x) {
+    for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = "~";
       if(!in_gutter(x) && ROT.RNG.getUniform() > .7) {
         row[x] = "o";
@@ -90,7 +90,7 @@ function init_game() {
   gen_state_end = 7;
 
   player_alive = true;
-  player_start_pos = [Math.floor(map_shape[0] / 2), 3];
+  player_start_pos = [Math.floor(field_shape[0] / 2), 3];
   player_pos = player_start_pos.slice();
   player_score = 0;
   player_narration = "";
@@ -104,7 +104,7 @@ function init() {
 
   // camera shows ~11 whole rows
   screen_shape = [13, 13];
-  map_shape = [13, 13];
+  field_shape = [13, 13];
   rows_shape = [1000, 100];
   gutter_width = 2;
   camera_pos = [0, 0];
@@ -118,11 +118,11 @@ function init() {
   });
   document.getElementById("display").appendChild(display.getContainer());
 
-  map = new Array(map_shape[1]);
-  visibility = new Array(map_shape[1]);
-  for(var i = 0; i < map_shape[1]; ++i) {
-    map[i] = new Array(map_shape[0]);
-    visibility[i] = new Array(map_shape[0]);
+  field = new Array(field_shape[1]);
+  visibility = new Array(field_shape[1]);
+  for(var i = 0; i < field_shape[1]; ++i) {
+    field[i] = new Array(field_shape[0]);
+    visibility[i] = new Array(field_shape[0]);
   }
 
   rows = new Array(rows_shape[1]);
@@ -151,7 +151,7 @@ function key_down(event) {
 
 function light_passes(x, y) {
   if(y >= 0 && y < visibility.length && x >= 0 && x < visibility[0].length) {
-    return map[y][x] != '*';
+    return field[y][x] != '*';
   } else {
     return false;
   }
@@ -212,7 +212,7 @@ function get_bg(pos) {
 
 function get_tile(pos) {
   pos = world_to_field(pos);
-  return map[pos[1]][pos[0]];
+  return field[pos[1]][pos[0]];
 }
 
 function draw() {
@@ -323,7 +323,7 @@ function tick() {
     gen_row();
   }
 
-  for(var y = 0; y < map_shape[1]; ++y) {
+  for(var y = 0; y < field_shape[1]; ++y) {
     // if(player_alive && player_pos[1] == y && game_time % row_dts[y] == 0) {
     //   player_pos[0] -= row_dts[y] / Math.abs(row_dts[y]);
     // }
@@ -332,14 +332,14 @@ function tick() {
     //   dx = Math.floor(game_time / row_dts[y]);
     //   while(dx < 0) dx += rows_shape[0];
     // }
-    for(var x = 0; x < map_shape[0]; ++x) {
+    for(var x = 0; x < field_shape[0]; ++x) {
       var row_pos = field_to_rows([x + dx, y]);
-      map[y][x] = rows[row_pos[1]][row_pos[0]];
+      field[y][x] = rows[row_pos[1]][row_pos[0]];
     }
   }
 
   if(player_alive) {
-    if(player_pos[0] < gutter_width || player_pos[0] >= map_shape[0] - gutter_width) {
+    if(player_pos[0] < gutter_width || player_pos[0] >= field_shape[0] - gutter_width) {
       player_alive = false;
     }
   }
