@@ -122,7 +122,7 @@ function gen_row() {
   if(gen_y == gen_state_end) {
     var dart = ROT.RNG.getUniform();
     if(dart < .25) gen_state = "grass";
-    if(dart < .50) gen_state = "railroad";
+    else if(dart < .50) gen_state = "railroad";
     else if(dart < .75) gen_state = "water";
     else gen_state = "road";
 
