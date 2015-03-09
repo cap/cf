@@ -471,21 +471,23 @@ function key_up(event) {
     if(player_alive) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = get_tile(new_pos);
-      if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]") {
-        player_pos[0] += dp[0];
-        player_pos[1] += dp[1];
-        player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
-        if(!kestrel_active && player_pos[1] <= camera_pos[1]) {
-          kestrel_active = true;
-          kestrel_pos = [player_pos[0], player_pos[1] + screen_shape[1]];
-        }
-        if(new_tile == "~") {
-          player_alive = false;
-          player_narration = "SPLASH";
-        }
-        if(new_tile == "[" || new_tile == "]") {
-          player_alive = false;
-          player_narration = "SWIPE";
+      if(!in_gutter(new_pos[0]) || row_move_player[world_to_rows(new_pos)[1]]) {
+        if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]") {
+          player_pos[0] += dp[0];
+          player_pos[1] += dp[1];
+          player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
+          if(!kestrel_active && player_pos[1] <= camera_pos[1]) {
+            kestrel_active = true;
+            kestrel_pos = [player_pos[0], player_pos[1] + screen_shape[1]];
+          }
+          if(new_tile == "~") {
+            player_alive = false;
+            player_narration = "SPLASH";
+          }
+          if(new_tile == "[" || new_tile == "]") {
+            player_alive = false;
+            player_narration = "SWIPE";
+          }
         }
       }
     } else {
