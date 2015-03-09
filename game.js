@@ -7,7 +7,7 @@ var display;
 var map;
 var visibility;
 var queue;
-var movers;
+var rows;
 var row_dts;
 var rows_shape;
 var key_handler;
