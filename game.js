@@ -33,6 +33,7 @@ var show_title;
 var gen_y;
 var gen_state;
 var gen_state_end;
+var gen_state_first_end;
 
 var car_dts = [60, 120, 180, 240, 300, 360];
 
@@ -167,7 +168,7 @@ function init_game() {
 
   gen_y = 0;
   gen_state = "grass";
-  gen_state_end = 5;
+  gen_state_end = gen_state_first_end;
   camera_pos = [0, 0];
   camera_t = 0;
 
@@ -175,7 +176,6 @@ function init_game() {
   kestrel_pos = [0, 0];
 
   player_alive = true;
-  player_start_pos = [Math.floor(field_shape[0] / 2), 3];
   player_pos = player_start_pos.slice();
   player_score = 0;
   player_narration = "";
@@ -191,14 +191,25 @@ function init() {
   screen_shape = [13, 13];
   field_shape = [13, 13];
   rows_shape = [1000, 27];
+  gutter_width = 2;
+  player_start_pos = [Math.floor(field_shape[0] / 2), 3];
+  gen_state_first_end = 5;
+
   var font_size = 50;
 
+  // gen overview settings
   // screen_shape = [75, 75];
   // field_shape = [75, 75];
   // rows_shape = [100, 100];
   // font_size = 10;
 
-  gutter_width = 2;
+  // screenshot settings
+  // screen_shape = [15, 6];
+  // field_shape = [15, 6];
+  // rows_shape = [1000, 27];
+  // gutter_width = 3;
+  // player_start_pos = [Math.floor(field_shape[0] / 2), 1];
+  // gen_state_first_end = 2;
 
   display = new ROT.Display({
     width: screen_shape[0],
