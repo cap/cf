@@ -376,12 +376,14 @@ function draw() {
       var v = visibility[y][x] * 255;
       fg = ROT.Color.multiply(fg, [v, v, v]);
       bg = ROT.Color.multiply(bg, [v, v, v]);
-      if(tile == "-" || tile == "~") {
-        if(x < gutter_width || x >= screen_shape[0] - gutter_width) {
+      if(in_gutter(x)) {
+        if(tile == "-" || tile == "~") {
           var w = Math.floor(ROT.RNG.getUniform() * 64);
           bg = ROT.Color.add(bg, [w, w, w]);
           var dt = row_dts[row_pos[1]];
           if(tile == "~") display_tile = (dt < 0)? ")" : "(";
+        } else {
+          bg = ROT.Color.interpolate(bg, [0, 0, 0], .05);
         }
       }
       if(tile == "]" || tile == "[") {
