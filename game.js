@@ -23,8 +23,9 @@ var player_pos;
 var player_score;
 var player_narration;
 
+var camera_begin;
+var camera_end;
 var camera_pos;
-var camera_dt;
 var camera_t;
 
 var show_title;
@@ -140,8 +141,7 @@ function init_game() {
   gen_y = 0;
   gen_state = "grass";
   gen_state_end = 5;
-  camera_pos = [0, -1];
-  camera_dt = 120;
+  camera_pos = [0, 0];
   camera_t = 0;
 
   kestrel_active = false;
@@ -163,7 +163,7 @@ function init() {
   // camera shows ~11 whole rows
   screen_shape = [13, 13];
   field_shape = [13, 13];
-  rows_shape = [1000, 15];
+  rows_shape = [1000, 27];
   var font_size = 50;
 
   // screen_shape = [75, 75];
@@ -388,7 +388,6 @@ function draw() {
       }
       if(tile == "]" || tile == "[") {
         var dt = Math.abs(row_dts[row_pos[1]]);
-        window.console.log(dt, game_time);
         var time = game_time - (game_time % 60);
         var time_until_move = dt - 60 - (time % dt);
         var turns_until_move = time_until_move / 60;
@@ -451,15 +450,62 @@ function draw() {
   }
 }
 
-function tick() {
-  game_time += 10;
+function camera_tick() {
+  camera_t += .05;
 
-  if(camera_pos[1] < 0) camera_pos[1] = 0;
-  if((game_time - camera_t) % camera_dt == 0) {
-    if(player_alive && player_pos[1] > camera_pos[1]) {
-      // camera_pos[1]++;
+  var camera_y = camera_begin * (1 - camera_t) + camera_end * camera_t;
+  var new_pos_y = Math.max(0, Math.floor(camera_y));
+
+  if(camera_pos[1] != new_pos_y) {
+    camera_pos[1] = new_pos_y;
+    while(gen_y - camera_pos[1] < screen_shape[1]) {
+      gen_row();
+    }
+
+    for(var y = 0; y < field_shape[1]; ++y) {
+      var world_y = field_to_world([0, y])[1];
+      var row_y = world_to_rows([0, world_y])[1];
+      var dt = Math.abs(row_dts[row_y]);
+      var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
+      var cycles = (dt == 0)? 0 : Math.floor(game_time / dt);
+      var x0 = (dx <= 0)? 0 : rows_shape[0] - 1 - field_shape[0];
+      x0 += dx * cycles;
+      while(x0 < 0) x0 += rows_shape[0];
+
+      for(var x = 0; x < field_shape[0]; ++x) {
+        var row_pos = field_to_rows([x + x0, y]);
+        field[y][x] = rows[row_pos[1]][row_pos[0]];
+      }
     }
   }
+
+  draw();
+  if(camera_t >= 1) {
+    camera_pos[1] = camera_end;
+    tick();
+  } else {
+    setTimeout(camera_tick, 5);
+  }
+}
+
+function tick() {
+  {
+    var trigger = 3;
+    var dy = player_pos[1] - camera_pos[1];
+    if(dy >= screen_shape[1] - trigger) {
+      camera_t = 0;
+      camera_begin = camera_pos[1];
+      camera_end = Math.max(0, Math.floor(player_pos[1] - trigger));
+      return camera_tick();
+    } else if(player_pos[1] >= trigger && dy < trigger) {
+      camera_t = 0;
+      camera_begin = camera_pos[1];
+      camera_end = Math.max(0, Math.floor(player_pos[1] - (screen_shape[1] - 1 - trigger)));
+      return camera_tick();
+    }
+  }
+
+  game_time += 10;
 
   while(gen_y - camera_pos[1] < screen_shape[1]) {
     gen_row();
@@ -572,7 +618,6 @@ function key_up(event) {
           }
         }
       }
-      camera_pos[1] = Math.max(camera_pos[1], player_pos[1] - 3);
     } else {
       init_game();
     }
