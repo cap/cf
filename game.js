@@ -34,6 +34,37 @@ var gen_y;
 var gen_state;
 var gen_state_end;
 
+var car_dts = [60, 120, 180, 240, 300, 360];
+
+function rng_int(end) {
+  var r = Math.floor(ROT.RNG.getUniform() * end);
+  if(r == end) r = end - 1;
+  return r;
+}
+
+var colors = {
+  blue_background: [105, 206, 236],
+  water: [129, 245, 255],
+  light_grass: [189, 244, 102],
+  dark_grass: [182, 236, 94],
+  wood: [141, 83, 80],
+  tree: [182, 214, 33],
+  tree_front: [130, 153, 31],
+  tree_side: [59, 70, 18],
+  cars: [
+    [254, 59, 69], // red
+    [255, 77, 43], // orange
+    [255, 234, 93], // yellow
+    [143, 215, 93], // green
+    [4, 188, 250], // blue
+    [147, 97, 255], // violet
+  ],
+  road: [82, 88, 101],
+  road_stripe: [125, 135, 154],
+  lily_pad_dark: [17, 181, 94],
+  lily_pad_light: [30, 209, 118],
+};
+
 function in_gutter(x) {
   return x < gutter_width || x >= field_shape[0] - gutter_width;
 }
@@ -78,11 +109,7 @@ function gen_row() {
       }
     }
   } else if(gen_state == "road") {
-    if(ROT.RNG.getUniform() > .5) {
-      dt = 120;
-    } else {
-      dt = 180;
-    }
+    dt = car_dts[rng_int(car_dts.length)];
     if(ROT.RNG.getUniform() < .5) {
       dt *= -1;
     }
@@ -190,7 +217,7 @@ function init() {
   rows = new Array(rows_shape[1]);
   row_dts = new Array(rows_shape[1]);
   row_move_player = new Array(rows_shape[1]);
-  for(var i = 0; i < rows_shape[0]; ++i) {
+  for(var i = 0; i < rows_shape[1]; ++i) {
     rows[i] = new Array(rows_shape[0]);
     row_dts[i] = 0;
     row_move_player[i] = false;
@@ -363,7 +390,9 @@ function draw() {
       case "]":
       case "[": {
         bg = [82, 88, 101];
-        fg = [147, 97,  255];
+        var dt = row_dts[row_pos[1]];
+        var idx = car_dts.indexOf(Math.abs(dt));
+        fg = colors.cars[idx];
       } break;
       case "=": {
         bg = [82, 88, 101];
