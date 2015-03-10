@@ -78,9 +78,9 @@ function gen_row() {
     }
   } else if(gen_state == "road") {
     if(ROT.RNG.getUniform() > .5) {
-      dt = 60;
+      dt = 120;
     } else {
-      dt = 90;
+      dt = 180;
     }
     if(ROT.RNG.getUniform() < .5) {
       dt *= -1;
@@ -88,15 +88,17 @@ function gen_row() {
     var skip = 0;
     for(var x = 0; x < rows_shape[0]; ++x) {
       skip--;
-      if(skip > 0 || ROT.RNG.getUniform() > .5) {
+      if(x >= rows_shape[0] - 2 || skip > 0 || ROT.RNG.getUniform() < .8) {
         row[x] = "_";
       } else {
         if(dt < 0) {
-          row[x] = "]";
-          skip = 3;
+          row[x++] = "[";
+          row[x] = ")";
+          skip = 2;
         } else {
-          row[x] = "[";
-          skip = 3;
+          row[x++] = "(";
+          row[x] = "]";
+          skip = 2;
         }
       }
     }
@@ -271,6 +273,9 @@ function get_bg(pos) {
     bg = [129, 245, 255];
   } break;
   case "_":
+  case "#":
+  case ")":
+  case "(":
   case "]":
   case "[": {
     bg = [82, 88, 101];
@@ -310,6 +315,7 @@ function draw() {
   for(var y = 0; y < screen_shape[1]; ++y) {
     for(var x = 0; x < screen_shape[0]; ++x) {
       var pos = field_to_world([x, y]);
+      var row_pos = field_to_rows([x, y]);
       var tile = get_tile(pos);
       var display_tile = tile;
       var fg = "#fff";
@@ -350,6 +356,9 @@ function draw() {
         //   fg = [125, 135, 154];
         // }
       } break;
+      case "#":
+      case ")":
+      case "(":
       case "]":
       case "[": {
         bg = [82, 88, 101];
@@ -371,7 +380,22 @@ function draw() {
         if(x < gutter_width || x >= screen_shape[0] - gutter_width) {
           var w = Math.floor(ROT.RNG.getUniform() * 64);
           bg = ROT.Color.add(bg, [w, w, w]);
+          var dt = row_dts[row_pos[1]];
+          if(tile == "~") display_tile = (dt < 0)? ")" : "(";
         }
+      }
+      if(tile == "]" || tile == "[") {
+        var dt = Math.abs(row_dts[row_pos[1]]);
+        window.console.log(dt, game_time);
+        var time = game_time - (game_time % 60);
+        var time_until_move = dt - 60 - (time % dt);
+        var turns_until_move = time_until_move / 60;
+        var turns = dt / 60;
+        var readiness = 1 - (turns_until_move / turns);
+        var c = readiness * 255;
+        var c0 = ROT.Color.interpolate(bg, fg, .5);
+        var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
+        fg = ROT.Color.interpolate(c0, c1, readiness);
       }
       var pos = world_to_screen(pos);
       display.draw(pos[0], pos[1], display_tile, ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
@@ -426,9 +450,12 @@ function draw() {
 }
 
 function tick() {
+  game_time += 10;
+
+  if(camera_pos[1] < 0) camera_pos[1] = 0;
   if((game_time - camera_t) % camera_dt == 0) {
     if(player_alive && player_pos[1] > camera_pos[1]) {
-      camera_pos[1]++;
+      // camera_pos[1]++;
     }
   }
 
@@ -437,22 +464,24 @@ function tick() {
   }
 
   for(var y = 0; y < field_shape[1]; ++y) {
-    var world_pos = field_to_world([0, y]);
-    var row_pos = world_to_rows(world_pos);
-    var dt = row_dts[row_pos[1]];
-    var move_player = row_move_player[row_pos[1]];
+    var world_y = field_to_world([0, y])[1];
+    var row_y = world_to_rows([0, world_y])[1];
+    var dt = Math.abs(row_dts[row_y]);
+    var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
+    var cycles = (dt == 0)? 0 : Math.floor(game_time / dt);
+    var x0 = (dx <= 0)? 0 : rows_shape[0] - 1 - field_shape[0];
+    x0 += dx * cycles;
+    while(x0 < 0) x0 += rows_shape[0];
+
+    var move_player = row_move_player[row_y];
     if(move_player) {
-      if(player_alive && player_pos[1] == world_pos[1] && game_time % dt == 0) {
-        player_pos[0] -= dt / Math.abs(dt);
+      if(player_alive && player_pos[1] == world_y && game_time % dt == 0) {
+        player_pos[0] -= dx;
       }
     }
-    var dx = 0;
-    if(dt != 0) {
-      dx = Math.floor(game_time / dt);
-      while(dx < 0) dx += rows_shape[0];
-    }
+
     for(var x = 0; x < field_shape[0]; ++x) {
-      var row_pos = field_to_rows([x + dx, y]);
+      var row_pos = field_to_rows([x + x0, y]);
       field[y][x] = rows[row_pos[1]][row_pos[0]];
     }
   }
@@ -486,14 +515,13 @@ function tick() {
     }
   }
 
-  draw();
-
-  game_time += 10;
   if(game_time % 60 == 0) {
     key_handler = window.addEventListener("keyup", key_up);
   } else {
     setTimeout(tick, 5);
   }
+
+  draw();
 }
 
 function key_up(event) {
