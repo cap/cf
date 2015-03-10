@@ -351,6 +351,7 @@ function draw() {
       case "_": {
         bg = [82, 88, 101];
         fg = [82, 88, 101];
+        display_tile = " ";
         // if(pos[0] % 2 == 0) {
         //   display_tile = "_";
         //   fg = [125, 135, 154];
