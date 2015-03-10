@@ -14,8 +14,14 @@ var key_handler;
 
 var game_time;
 
-var kestrel_active;
+var kestrel_homing;
 var kestrel_pos;
+var kestrel_v;
+var kestrel_dt;
+var kestrel_t;
+var kestrel_dty;
+var kestrel_range;
+var kestrel_dead_y;
 
 var player_alive;
 var player_start_pos;
@@ -172,8 +178,14 @@ function init_game() {
   camera_pos = [0, 0];
   camera_t = 0;
 
-  kestrel_active = false;
-  kestrel_pos = [0, 0];
+  kestrel_homing = false;
+  kestrel_pos = [Math.floor(screen_shape[1] / 2), 0];
+  kestrel_v = (ROT.RNG.getUniform() < .5)? 1 : -1;
+  kestrel_dt = 30;
+  kestrel_t = 0;
+  kestrel_dty = 60 * 4;
+  kestrel_range = 2;
+  kestrel_dead_y = 3;
 
   player_alive = true;
   player_pos = player_start_pos.slice();
@@ -451,7 +463,8 @@ function draw() {
   //   display.draw(pos[0], pos[1], "X", fg, bg);
   // }
 
-  if(kestrel_active) {
+  // kestrel
+  {
     var fg = ROT.Color.toRGB([141, 83,  80]);
     var tile = "K";
     var bg = ROT.Color.toRGB(get_bg(kestrel_pos));
@@ -546,7 +559,8 @@ function tick() {
     }
   }
 
-  game_time += 10;
+  var tick_dt = 5;
+  game_time += tick_dt;
 
   while(gen_y - camera_pos[1] < screen_shape[1]) {
     gen_row();
@@ -575,19 +589,43 @@ function tick() {
     }
   }
 
-  if(!kestrel_active && player_pos[1] <= camera_pos[1]) {
-    kestrel_active = true;
-    kestrel_pos = [player_pos[0], player_pos[1] + screen_shape[1]];
+  if(kestrel_homing) {
+    kestrel_pos[1] = player_pos[1];
+  } else {
+    if(kestrel_pos[1] >= player_pos[1]) {
+      kestrel_homing = true;
+      kestrel_dt = 15;
+      if(player_pos[0] == kestrel_pos[0]) {
+        kestrel_v = 0;
+      } else {
+        kestrel_v = (player_pos[0] < kestrel_pos[0])? -1 : 1;
+      }
+    } else {
+      kestrel_t += tick_dt;
+      if(kestrel_t >= kestrel_dty) {
+        kestrel_pos[1]++;
+        kestrel_t = 0;
+      }
+    }
   }
 
-  if(kestrel_active) {
-    kestrel_pos[0] = player_pos[0];
-    if(kestrel_pos[1] > player_pos[1]) kestrel_pos[1]--;
+  if(game_time % kestrel_dt == 0) {
+    kestrel_pos[0] += kestrel_v;
+    if((kestrel_pos[0] <= -kestrel_range && kestrel_v < 0) ||
+       (kestrel_pos[0] > screen_shape[0] + kestrel_range && kestrel_v > 0)) {
+      if(ROT.RNG.getUniform() < .8) kestrel_v *= -1;
+      if(player_pos[1] - kestrel_pos[1] > kestrel_dead_y) {
+        kestrel_pos[1] = player_pos[1] - kestrel_dead_y;
+        kestrel_t = 0;
+      }
+    }
   }
+
 
   if(player_alive) {
-    if(player_pos[0] < gutter_width || player_pos[0] >= field_shape[0] - gutter_width) {
+    if(in_gutter(player_pos[0])) {
       player_alive = false;
+      player_narration = "RAPIDS";
     }
     var tile = get_tile(player_pos);
     if(tile == "[" || tile == "]") {
@@ -598,7 +636,8 @@ function tick() {
       player_alive = false;
       player_narration = "TRAIN";
     }
-    if(kestrel_active && kestrel_pos[1] == player_pos[1]) {
+    if(kestrel_pos[0] == player_pos[0] && kestrel_pos[1] == player_pos[1]) {
+      kestrel_v = 0;
       player_alive = false;
       player_narration = "KESTREL";
     }
@@ -607,7 +646,7 @@ function tick() {
   if(game_time % 60 == 0) {
     key_handler = window.addEventListener("keyup", key_up);
   } else {
-    setTimeout(tick, 5);
+    setTimeout(tick, 2);
   }
 
   draw();
