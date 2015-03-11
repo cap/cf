@@ -71,6 +71,10 @@ function rng_uniform() {
     return ROT.RNG.getUniform();
 }
 
+function rng_normal(mean, sd) {
+  return ROT.RNG.getNormal(mean, sd);
+}
+
 function rng_int(end) {
   var r = Math.floor(rng_uniform() * end);
   if(r == end) r = end - 1;
@@ -182,11 +186,32 @@ function gen_row() {
   row_move_player[gen_y % rows_shape[1]] = move_player;
   ++gen_y;
   if(gen_y == gen_state_end) {
-    gen_state = rng_choose(
-      ["grass", "railroad", "water", "road"],
-      [.25, .25, .25, .25]);
+    var states = ["grass", "railroad", "water", "road"];
+    var ps = [1, 1, .7, 1];
 
-    gen_state_end = gen_y + 1 + Math.floor(rng_uniform() * 3);
+    ps[states.indexOf("grass")] += Math.max(0, 1 - gen_y / 100);
+    ps[states.indexOf(gen_state)] = 0;
+    gen_state = rng_choose(states, ps);
+
+    var len = 0;
+    if(gen_state == "grass") {
+      len = rng_choose(
+        [0, 1, 2],
+        [10, 5, 2]);
+    } else {
+      if(gen_state == "railroad") {
+        mean = gen_y / 40;
+        sd = gen_y / 160;
+      } else {
+        mean = gen_y / 20;
+        sd = gen_y / 80;
+      }
+
+      len = Math.max(0, Math.floor(rng_normal(mean, sd)));
+      // len = Math.floor(rng_uniform() * (gen_y / 25));
+    }
+
+    gen_state_end = gen_y + 1 + len;
   }
 }
 
@@ -230,11 +255,11 @@ function init() {
 
   var font_size = 50;
 
-  // gen overview settings
-  // screen_shape = [75, 75];
-  // field_shape = [75, 75];
-  // rows_shape = [100, 100];
-  // font_size = 10;
+  // tuning settings
+  // screen_shape = [13, 350];
+  // field_shape = [13, 350];
+  // rows_shape = [13, 500];
+  // font_size = 4;
 
   // screenshot settings
   // screen_shape = [15, 6];
