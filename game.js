@@ -42,13 +42,6 @@ var gen_state_end;
 var gen_state_first_end;
 
 var car_dts = [60, 120, 180, 240, 300, 360];
-
-function rng_int(end) {
-  var r = Math.floor(ROT.RNG.getUniform() * end);
-  if(r == end) r = end - 1;
-  return r;
-}
-
 var colors = {
   black: [0, 0, 0],
   white: [255, 255, 255],
@@ -74,6 +67,34 @@ var colors = {
   lily_pad_light: [30, 209, 118],
 };
 
+function rng_uniform() {
+    return ROT.RNG.getUniform();
+}
+
+function rng_int(end) {
+  var r = Math.floor(rng_uniform() * end);
+  if(r == end) r = end - 1;
+  return r;
+}
+
+function rng_discrete(ps) {
+  var total = 0;
+  for(var i = 0; i < ps.length; ++i) {
+    total += ps[i];
+  }
+  var dart = rng_uniform() * total;
+  var sum = 0;
+  for(var i = 0; i < ps.length; ++i) {
+    sum += ps[i];
+    if(dart < sum) return i;
+  }
+  return ps.length - 1;
+}
+
+function rng_choose(values, ps) {
+  return values[rng_discrete(ps)];
+}
+
 function in_gutter(x) {
   return x < gutter_width || x >= field_shape[0] - gutter_width;
 }
@@ -85,7 +106,7 @@ function gen_row() {
   if(gen_state == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
-      if(ROT.RNG.getUniform() > .9) {
+      if(rng_uniform() < .1) {
         row[x] = "*";
       }
       if(gen_y == 0 || in_gutter(x)) {
@@ -95,22 +116,22 @@ function gen_row() {
   } else if(gen_state == "water") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = "~";
-      if(!in_gutter(x) && ROT.RNG.getUniform() > .7) {
+      if(!in_gutter(x) && rng_uniform() < .3) {
         row[x] = "o";
       }
     }
-    if(ROT.RNG.getUniform() > .3) {
+    if(rng_uniform() < .7) {
       move_player = true;
-      if(ROT.RNG.getUniform() > .5) {
+      if(rng_uniform() < .5) {
         dt = 60;
       } else {
         dt = 90;
       }
-      if(ROT.RNG.getUniform() < .5) {
+      if(rng_uniform() < .5) {
         dt *= -1;
       }
       for(var x = 0; x < rows_shape[0]; ++x) {
-        if(ROT.RNG.getUniform() > .5) {
+        if(rng_uniform() < .5) {
           row[x] = "-";
         } else {
           row[x] = "~";
@@ -119,13 +140,13 @@ function gen_row() {
     }
   } else if(gen_state == "road") {
     dt = car_dts[rng_int(car_dts.length)];
-    if(ROT.RNG.getUniform() < .5) {
+    if(rng_uniform() < .5) {
       dt *= -1;
     }
     var skip = 0;
     for(var x = 0; x < rows_shape[0]; ++x) {
       skip--;
-      if(x >= rows_shape[0] - 2 || skip > 0 || ROT.RNG.getUniform() < .8) {
+      if(x >= rows_shape[0] - 2 || skip > 0 || rng_uniform() < .8) {
         row[x] = "_";
       } else {
         if(dt < 0) {
@@ -141,11 +162,11 @@ function gen_row() {
     }
   } else if(gen_state == "railroad") {
     dt = 10;
-    if(ROT.RNG.getUniform() < .5) {
+    if(rng_uniform() < .5) {
       dt *= -1;
     }
     var len = 20;
-    var start = Math.floor(5 + ROT.RNG.getUniform() * 60);
+    var start = Math.floor(5 + rng_uniform() * 60);
     if(dt < 0) {
       start = Math.max(0, rows_shape[0] - start - len);
     }
@@ -161,13 +182,11 @@ function gen_row() {
   row_move_player[gen_y % rows_shape[1]] = move_player;
   ++gen_y;
   if(gen_y == gen_state_end) {
-    var dart = ROT.RNG.getUniform();
-    if(dart < .25) gen_state = "grass";
-    else if(dart < .50) gen_state = "railroad";
-    else if(dart < .75) gen_state = "water";
-    else gen_state = "road";
+    gen_state = rng_choose(
+      ["grass", "railroad", "water", "road"],
+      [.25, .25, .25, .25]);
 
-    gen_state_end = gen_y + 1 + Math.floor(ROT.RNG.getUniform() * 3);
+    gen_state_end = gen_y + 1 + Math.floor(rng_uniform() * 3);
   }
 }
 
@@ -182,7 +201,7 @@ function init_game() {
 
   kestrel_homing = false;
   kestrel_pos = [Math.floor(screen_shape[1] / 2), 0];
-  kestrel_v = (ROT.RNG.getUniform() < .5)? 1 : -1;
+  kestrel_v = (rng_uniform() < .5)? 1 : -1;
   kestrel_dt = 30;
   kestrel_t = 0;
   kestrel_dty = 60 * 4;
@@ -376,7 +395,7 @@ function render_tile(pos) {
   }
   if(in_gutter(pos[0])) {
     if(tile == "-" || tile == "~") {
-      var w = Math.floor(ROT.RNG.getUniform() * 64);
+      var w = Math.floor(rng_uniform() * 64);
       bg = ROT.Color.add(bg, [w, w, w]);
       var dt = row_dts[row_pos[1]];
       if(tile == "~") display_tile = (dt < 0)? ")" : "(";
@@ -618,7 +637,7 @@ function tick() {
     kestrel_pos[0] += kestrel_v;
     if((kestrel_pos[0] <= -kestrel_range && kestrel_v < 0) ||
        (kestrel_pos[0] > screen_shape[0] + kestrel_range && kestrel_v > 0)) {
-      if(ROT.RNG.getUniform() < .8) kestrel_v *= -1;
+      if(rng_uniform() < .8) kestrel_v *= -1;
       if(player_pos[1] - kestrel_pos[1] > kestrel_dead_y) {
         kestrel_pos[1] = player_pos[1] - kestrel_dead_y;
         kestrel_t = 0;
