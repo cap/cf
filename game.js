@@ -269,7 +269,16 @@ function key_down(event) {
 
 function light_passes(x, y) {
   if(y >= 0 && y < visibility.length && x >= 0 && x < visibility[0].length) {
-    return field[y][x] != '*';
+    switch(field[y][x]) {
+    case "*":
+    case "[":
+    case "(":
+    case "]":
+    case ")":
+    case "T":
+      return false;
+    }
+    return true;
   } else {
     return false;
   }
@@ -365,9 +374,6 @@ function render_tile(pos) {
     fg = colors.water;
   } break;
   }
-  // var v = visibility[y][x] * 255;
-  // fg = ROT.Color.multiply(fg, [v, v, v]);
-  // bg = ROT.Color.multiply(bg, [v, v, v]);
   if(in_gutter(pos[0])) {
     if(tile == "-" || tile == "~") {
       var w = Math.floor(ROT.RNG.getUniform() * 64);
@@ -390,11 +396,25 @@ function render_tile(pos) {
     var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
     fg = ROT.Color.interpolate(c0, c1, readiness);
   }
+
+  {
+    var fp = world_to_field(pos);
+    if(valid_p(fp, field_shape)) {
+      var v = visibility[fp[1]][fp[0]] * 255;
+      fg = ROT.Color.multiply(fg, [v, v, v]);
+      bg = ROT.Color.multiply(bg, [v, v, v]);
+    }
+  }
+
   return {
     tile: display_tile,
     bg: bg,
     fg: fg
   }
+}
+
+function valid_p(p, shape) {
+  return p[0] >= 0 && p[0] < shape[0] && p[1] >= 0 && p[1] < shape[1];
 }
 
 function get_bg(pos) {
@@ -414,16 +434,19 @@ function draw() {
   for(var y = 0; y < visibility.length; ++y) {
     var row = visibility[y];
     for(var x = 0; x < row.length; ++x) {
-      row[x] = 1;
+      row[x] = 0;
     }
   }
 
-  // var fov = new ROT.FOV.PreciseShadowcasting(light_passes);
-  // fov.compute(player_pos[0], player_pos[1], 10, function(x, y, r, v) {
-  //   if(y >= 0 && y < visibility.length && x >= 0 && x < visibility[0].length) {
-  //     visibility[y][x] = v; // * (10 - r) / 10;
-  //   }
-  // });
+  {
+    var pos = world_to_field(player_pos);
+    var fov = new ROT.FOV.PreciseShadowcasting(light_passes);
+    fov.compute(pos[0], pos[1], 10, function(x, y, r, v) {
+      if(y >= 0 && y < visibility.length && x >= 0 && x < visibility[0].length) {
+        visibility[y][x] = v; // * (10 - r) / 10;
+      }
+    });
+  }
 
   for(var y = 0; y < screen_shape[1]; ++y) {
     for(var x = 0; x < screen_shape[0]; ++x) {
