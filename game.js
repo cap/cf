@@ -105,11 +105,17 @@ function in_gutter(x) {
 }
 
 function gen_row() {
+  var progress = gen_y;
   var row_y = gen_y % rows_shape[1];
-  var prev_y = (gen_y - 1 + rows_shape[1]) % rows_shape[1];
+  var row_y_1 = (gen_y - 1 + rows_shape[1]) % rows_shape[1];
+  var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
   var dt = 0;
   var move_player = false;
+  var full_type = {
+    type: gen_type,
+    subtype: null
+  };
   if(gen_type == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
@@ -121,19 +127,42 @@ function gen_row() {
       }
     }
   } else if(gen_type == "water") {
-    for(var x = 0; x < field_shape[0]; ++x) {
-      row[x] = "~";
-      if(!in_gutter(x) && rng_uniform() < .3) {
+    var subtypes = ["log", "pad"];
+    var ps = [.7, .3];
+    ps[subtypes.indexOf("pad")] += 1 / progress;
+    if(row_types[row_y_1].subtype == "pad" && row_types[row_y_2].subtype == "pad") {
+      ps[subtypes.indexOf("pad")] = 0;
+    }
+    full_type.subtype = rng_choose(subtypes, ps);
+    if(full_type.subtype == "pad") {
+      for(var x = 0; x < field_shape[0]; ++x) {
+        row[x] = "~";
+      }
+      var count = rng_choose(
+        [1, 2, 3, 4],
+        [1, 3, 2, .5]);
+      var placed = 0;
+      if(row_types[row_y_1].subtype == "pad") {
+        var prev_pads = [];
+        for(var x = 0; x < field_shape[0]; ++x) {
+          if(rows[row_y_1][x] == "o") prev_pads.push(x);
+        }
+        placed = rng_choose([1, 2], [1, 1]);
+        placed = Math.min(Math.min(placed, prev_pads.length), count);
+        for(var i = 0; i < placed; ++i) {
+          row[prev_pads[i]] = "o";
+        }
+      }
+      for(var i = placed; i < count; ++i) {
+        var x = Math.floor(
+          gutter_width + rng_uniform() * (field_shape[0] - 2 * gutter_width));
         row[x] = "o";
       }
-    }
-    if(rng_uniform() < .7) {
+    } else {
       move_player = true;
-      if(rng_uniform() < .5) {
-        dt = 60;
-      } else {
-        dt = 90;
-      }
+      dt = rng_choose(
+        [60, 90],
+        [1, 1]);
       if(rng_uniform() < .5) {
         dt *= -1;
       }
@@ -187,14 +216,16 @@ function gen_row() {
   }
 
   row_dts[row_y] = dt;
-  row_types[row_y] = gen_type;
+  row_types[row_y] = full_type;
   row_move_player[row_y] = move_player;
   ++gen_y;
+  ++progress;
   if(gen_y == gen_end) {
     var states = ["grass", "railroad", "water", "road"];
     var ps = [1, 1, .7, 1];
 
-    ps[states.indexOf("grass")] += Math.max(0, 1 - gen_y / 100);
+
+    ps[states.indexOf("grass")] += Math.max(0, 1 - progress / 100);
     ps[states.indexOf(gen_type)] = 0;
     gen_type = rng_choose(states, ps);
 
@@ -205,11 +236,11 @@ function gen_row() {
         [10, 5, 2]);
     } else {
       if(gen_type == "railroad") {
-        mean = gen_y / 40;
-        sd = gen_y / 160;
+        mean = progress / 40;
+        sd = progress / 160;
       } else {
-        mean = gen_y / 20;
-        sd = gen_y / 80;
+        mean = progress / 20;
+        sd = progress / 80;
       }
 
       len = Math.max(0, Math.floor(rng_normal(mean, sd)));
