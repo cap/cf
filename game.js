@@ -293,19 +293,26 @@ function field_to_world(pos) {
   return [pos[0] + camera_pos[0], pos[1] + camera_pos[1]];
 }
 
+function field_to_screen(pos) {
+  return world_to_screen(field_to_world(pos));
+}
+
 function field_to_rows(pos) {
   return world_to_rows(field_to_world(pos));
 }
 
-function get_bg(pos) {
+function render_tile(pos) {
+  var row_pos = world_to_rows([pos[0], pos[1]]);
   var tile = get_tile(pos);
-  var bg = [0, 0, 0];
+  var display_tile = tile;
+  var fg = "#fff";
+  var bg = "#000";
   switch(tile) {
   case ".": {
     if(pos[1] % 2 == 0) {
-      bg = [189, 244, 102];
+      fg = [189, 244, 102]; bg = [189, 244, 102];
     } else {
-      bg = [182, 236, 94];
+      fg = [182, 236, 94]; bg = [182, 236, 94];
     }
   } break;
   case "*": {
@@ -314,28 +321,82 @@ function get_bg(pos) {
     } else {
       bg = [182, 236, 94];
     }
+    fg = [130, 153, 31];
   } break;
-  case "-":
   case "~": {
     bg = [129, 245, 255];
+    fg = [129, 245, 255];
   } break;
   case "o": {
     bg = [129, 245, 255];
+    fg = [30, 209, 118]; //[17, 181, 94];
   } break;
-  case "_":
+  case "-": {
+    bg = [129, 245, 255];
+    fg = [141, 83,  80];
+  } break;
+  case "_": {
+    bg = [82, 88, 101];
+    fg = [82, 88, 101];
+    display_tile = " ";
+    // if(pos[0] % 2 == 0) {
+    //   display_tile = "_";
+    //   fg = [125, 135, 154];
+    // }
+  } break;
   case "#":
   case ")":
   case "(":
   case "]":
   case "[": {
     bg = [82, 88, 101];
+    var dt = row_dts[row_pos[1]];
+    var idx = car_dts.indexOf(Math.abs(dt));
+    fg = colors.cars[idx];
   } break;
-  case "=":
+  case "=": {
+    bg = [82, 88, 101];
+    fg = [125, 135, 154];
+  } break;
   case "T": {
     bg = [82, 88, 101];
+    fg = [129, 245, 255];
   } break;
   }
-  return bg;
+  // var v = visibility[y][x] * 255;
+  // fg = ROT.Color.multiply(fg, [v, v, v]);
+  // bg = ROT.Color.multiply(bg, [v, v, v]);
+  if(in_gutter(pos[0])) {
+    if(tile == "-" || tile == "~") {
+      var w = Math.floor(ROT.RNG.getUniform() * 64);
+      bg = ROT.Color.add(bg, [w, w, w]);
+      var dt = row_dts[row_pos[1]];
+      if(tile == "~") display_tile = (dt < 0)? ")" : "(";
+    } else {
+      bg = ROT.Color.interpolate(bg, [0, 0, 0], .05);
+    }
+  }
+  if(tile == "]" || tile == "[") {
+    var dt = Math.abs(row_dts[row_pos[1]]);
+    var time = game_time - (game_time % 60);
+    var time_until_move = dt - 60 - (time % dt);
+    var turns_until_move = time_until_move / 60;
+    var turns = dt / 60;
+    var readiness = 1 - (turns_until_move / turns);
+    var c = readiness * 255;
+    var c0 = ROT.Color.interpolate(bg, fg, .5);
+    var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
+    fg = ROT.Color.interpolate(c0, c1, readiness);
+  }
+  return {
+    tile: display_tile,
+    bg: bg,
+    fg: fg
+  }
+}
+
+function get_bg(pos) {
+  return render_tile(pos).bg;
 }
 
 function get_tile(pos) {
@@ -364,95 +425,12 @@ function draw() {
 
   for(var y = 0; y < screen_shape[1]; ++y) {
     for(var x = 0; x < screen_shape[0]; ++x) {
-      var pos = field_to_world([x, y]);
-      var row_pos = field_to_rows([x, y]);
-      var tile = get_tile(pos);
-      var display_tile = tile;
-      var fg = "#fff";
-      var bg = "#000";
-      switch(tile) {
-      case ".": {
-        if(pos[1] % 2 == 0) {
-          fg = [189, 244, 102]; bg = [189, 244, 102];
-        } else {
-          fg = [182, 236, 94]; bg = [182, 236, 94];
-        }
-      } break;
-      case "*": {
-        if(pos[1] % 2 == 0) {
-          bg = [189, 244, 102];
-        } else {
-          bg = [182, 236, 94];
-        }
-        fg = [130, 153, 31];
-      } break;
-      case "~": {
-        bg = [129, 245, 255];
-        fg = [129, 245, 255];
-      } break;
-      case "o": {
-        bg = [129, 245, 255];
-        fg = [30, 209, 118]; //[17, 181, 94];
-      } break;
-      case "-": {
-        bg = [129, 245, 255];
-        fg = [141, 83,  80];
-      } break;
-      case "_": {
-        bg = [82, 88, 101];
-        fg = [82, 88, 101];
-        display_tile = " ";
-        // if(pos[0] % 2 == 0) {
-        //   display_tile = "_";
-        //   fg = [125, 135, 154];
-        // }
-      } break;
-      case "#":
-      case ")":
-      case "(":
-      case "]":
-      case "[": {
-        bg = [82, 88, 101];
-        var dt = row_dts[row_pos[1]];
-        var idx = car_dts.indexOf(Math.abs(dt));
-        fg = colors.cars[idx];
-      } break;
-      case "=": {
-        bg = [82, 88, 101];
-        fg = [125, 135, 154];
-      } break;
-      case "T": {
-        bg = [82, 88, 101];
-        fg = [129, 245, 255];
-      } break;
-      }
-      var v = visibility[y][x] * 255;
-      fg = ROT.Color.multiply(fg, [v, v, v]);
-      bg = ROT.Color.multiply(bg, [v, v, v]);
-      if(in_gutter(x)) {
-        if(tile == "-" || tile == "~") {
-          var w = Math.floor(ROT.RNG.getUniform() * 64);
-          bg = ROT.Color.add(bg, [w, w, w]);
-          var dt = row_dts[row_pos[1]];
-          if(tile == "~") display_tile = (dt < 0)? ")" : "(";
-        } else {
-          bg = ROT.Color.interpolate(bg, [0, 0, 0], .05);
-        }
-      }
-      if(tile == "]" || tile == "[") {
-        var dt = Math.abs(row_dts[row_pos[1]]);
-        var time = game_time - (game_time % 60);
-        var time_until_move = dt - 60 - (time % dt);
-        var turns_until_move = time_until_move / 60;
-        var turns = dt / 60;
-        var readiness = 1 - (turns_until_move / turns);
-        var c = readiness * 255;
-        var c0 = ROT.Color.interpolate(bg, fg, .5);
-        var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
-        fg = ROT.Color.interpolate(c0, c1, readiness);
-      }
-      var pos = world_to_screen(pos);
-      display.draw(pos[0], pos[1], display_tile, ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
+      var tile = render_tile(field_to_world([x, y]));
+      var pos = field_to_screen([x, y]);
+      display.draw(
+        pos[0], pos[1], tile.tile,
+        ROT.Color.toRGB(tile.fg),
+        ROT.Color.toRGB(tile.bg));
     }
   }
 
@@ -494,6 +472,8 @@ function draw() {
         screen_pos[0], screen_pos[1], col + player_score.toString());
     }
     var x = Math.floor((screen_shape[0] - player_narration.length) / 2);
+    var bg = get_bg(screen_to_world([x, 0]));
+    var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
     display.drawText(x, 0, col + player_narration);
   }
 
