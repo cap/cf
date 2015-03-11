@@ -7,6 +7,7 @@ var display;
 var field;
 var visibility;
 var rows;
+var row_types;
 var row_dts;
 var row_move_player;
 var rows_shape;
@@ -37,9 +38,9 @@ var camera_t;
 var show_title;
 
 var gen_y;
-var gen_state;
-var gen_state_end;
-var gen_state_first_end;
+var gen_type;
+var gen_end;
+var gen_first_end;
 
 var car_dts = [60, 120, 180, 240, 300, 360];
 var colors = {
@@ -104,10 +105,12 @@ function in_gutter(x) {
 }
 
 function gen_row() {
-  var row = rows[gen_y % rows_shape[1]];
+  var row_y = gen_y % rows_shape[1];
+  var prev_y = (gen_y - 1 + rows_shape[1]) % rows_shape[1];
+  var row = rows[row_y];
   var dt = 0;
   var move_player = false;
-  if(gen_state == "grass") {
+  if(gen_type == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
       if(rng_uniform() < .1) {
@@ -117,7 +120,7 @@ function gen_row() {
         row[x] = "*";
       }
     }
-  } else if(gen_state == "water") {
+  } else if(gen_type == "water") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = "~";
       if(!in_gutter(x) && rng_uniform() < .3) {
@@ -142,7 +145,7 @@ function gen_row() {
         }
       }
     }
-  } else if(gen_state == "road") {
+  } else if(gen_type == "road") {
     dt = car_dts[rng_int(car_dts.length)];
     if(rng_uniform() < .5) {
       dt *= -1;
@@ -164,7 +167,7 @@ function gen_row() {
         }
       }
     }
-  } else if(gen_state == "railroad") {
+  } else if(gen_type == "railroad") {
     dt = 10;
     if(rng_uniform() < .5) {
       dt *= -1;
@@ -182,24 +185,26 @@ function gen_row() {
       }
     }
   }
-  row_dts[gen_y % rows_shape[1]] = dt;
-  row_move_player[gen_y % rows_shape[1]] = move_player;
+
+  row_dts[row_y] = dt;
+  row_types[row_y] = gen_type;
+  row_move_player[row_y] = move_player;
   ++gen_y;
-  if(gen_y == gen_state_end) {
+  if(gen_y == gen_end) {
     var states = ["grass", "railroad", "water", "road"];
     var ps = [1, 1, .7, 1];
 
     ps[states.indexOf("grass")] += Math.max(0, 1 - gen_y / 100);
-    ps[states.indexOf(gen_state)] = 0;
-    gen_state = rng_choose(states, ps);
+    ps[states.indexOf(gen_type)] = 0;
+    gen_type = rng_choose(states, ps);
 
     var len = 0;
-    if(gen_state == "grass") {
+    if(gen_type == "grass") {
       len = rng_choose(
         [0, 1, 2],
         [10, 5, 2]);
     } else {
-      if(gen_state == "railroad") {
+      if(gen_type == "railroad") {
         mean = gen_y / 40;
         sd = gen_y / 160;
       } else {
@@ -211,7 +216,7 @@ function gen_row() {
       // len = Math.floor(rng_uniform() * (gen_y / 25));
     }
 
-    gen_state_end = gen_y + 1 + len;
+    gen_end = gen_y + 1 + len;
   }
 }
 
@@ -219,8 +224,8 @@ function init_game() {
   game_time = 0;
 
   gen_y = 0;
-  gen_state = "grass";
-  gen_state_end = gen_state_first_end;
+  gen_type = "grass";
+  gen_end = gen_first_end;
   camera_pos = [0, 0];
   camera_t = 0;
 
@@ -251,7 +256,7 @@ function init() {
   rows_shape = [1000, 27];
   gutter_width = 2;
   player_start_pos = [Math.floor(field_shape[0] / 2), 3];
-  gen_state_first_end = 5;
+  gen_first_end = 5;
 
   var font_size = 50;
 
@@ -267,7 +272,7 @@ function init() {
   // rows_shape = [1000, 27];
   // gutter_width = 3;
   // player_start_pos = [Math.floor(field_shape[0] / 2), 1];
-  // gen_state_first_end = 2;
+  // gen_first_end = 2;
 
   display = new ROT.Display({
     width: screen_shape[0],
@@ -285,9 +290,11 @@ function init() {
 
   rows = new Array(rows_shape[1]);
   row_dts = new Array(rows_shape[1]);
+  row_types = new Array(rows_shape[1]);
   row_move_player = new Array(rows_shape[1]);
   for(var i = 0; i < rows_shape[1]; ++i) {
     rows[i] = new Array(rows_shape[0]);
+    row_types[i] = "";
     row_dts[i] = 0;
     row_move_player[i] = false;
   }
