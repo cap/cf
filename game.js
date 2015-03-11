@@ -270,7 +270,7 @@ function init() {
   init_game();
 
   tick();
-  key_handler = window.addEventListener("keyup", key_up);
+  key_handler = window.addEventListener("keydown", input);
   window.onkeydown = key_down;
 }
 
@@ -668,7 +668,7 @@ function tick() {
   }
 
   if(game_time % 60 == 0) {
-    key_handler = window.addEventListener("keyup", key_up);
+    key_handler = window.addEventListener("keydown", input);
   } else {
     setTimeout(tick, 2);
   }
@@ -676,7 +676,7 @@ function tick() {
   draw();
 }
 
-function key_up(event) {
+function input(event) {
   if(event.keyCode == ROT.VK_P) {
     // var img = document.createElement("img");
     // img.setAttribute('src', display.getContainer().toDataURL("image/png"));
@@ -685,7 +685,7 @@ function key_up(event) {
   }
   if(event.keyCode == ROT.VK_K) {
     init_game();
-    window.removeEventListener("keyup", key_up);
+    window.removeEventListener("keydown", input);
     tick();
     return;
   }
@@ -733,7 +733,7 @@ function key_up(event) {
     }
   }
 
-  window.removeEventListener("keyup", key_up);
+  window.removeEventListener("keydown", input);
   tick();
 }
 
