@@ -50,6 +50,8 @@ function rng_int(end) {
 }
 
 var colors = {
+  black: [0, 0, 0],
+  white: [255, 255, 255],
   blue_background: [105, 206, 236],
   water: [129, 245, 255],
   light_grass: [189, 244, 102],
@@ -310,38 +312,38 @@ function render_tile(pos) {
   switch(tile) {
   case ".": {
     if(pos[1] % 2 == 0) {
-      fg = [189, 244, 102]; bg = [189, 244, 102];
+      fg = colors.light_grass; bg = colors.light_grass;
     } else {
-      fg = [182, 236, 94]; bg = [182, 236, 94];
+      fg = colors.dark_grass; bg = colors.dark_grass;
     }
   } break;
   case "*": {
     if(pos[1] % 2 == 0) {
-      bg = [189, 244, 102];
+      bg = colors.light_grass;
     } else {
-      bg = [182, 236, 94];
+      bg = colors.dark_grass;
     }
-    fg = [130, 153, 31];
+    fg = colors.tree_front;
   } break;
   case "~": {
-    bg = [129, 245, 255];
-    fg = [129, 245, 255];
+    bg = colors.water;
+    fg = colors.water;
   } break;
   case "o": {
-    bg = [129, 245, 255];
-    fg = [30, 209, 118]; //[17, 181, 94];
+    bg = colors.water;
+    fg = colors.lily_pad_light;
   } break;
   case "-": {
-    bg = [129, 245, 255];
-    fg = [141, 83,  80];
+    bg = colors.water;
+    fg = colors.wood;
   } break;
   case "_": {
-    bg = [82, 88, 101];
-    fg = [82, 88, 101];
+    bg = colors.road;
+    fg = colors.road;
     display_tile = " ";
     // if(pos[0] % 2 == 0) {
     //   display_tile = "_";
-    //   fg = [125, 135, 154];
+    //   fg = colors.road_stripe;
     // }
   } break;
   case "#":
@@ -349,18 +351,18 @@ function render_tile(pos) {
   case "(":
   case "]":
   case "[": {
-    bg = [82, 88, 101];
+    bg = colors.road;
     var dt = row_dts[row_pos[1]];
     var idx = car_dts.indexOf(Math.abs(dt));
     fg = colors.cars[idx];
   } break;
   case "=": {
-    bg = [82, 88, 101];
-    fg = [125, 135, 154];
+    bg = colors.road;
+    fg = colors.road_stripe;
   } break;
   case "T": {
-    bg = [82, 88, 101];
-    fg = [129, 245, 255];
+    bg = colors.road;
+    fg = colors.water;
   } break;
   }
   // var v = visibility[y][x] * 255;
@@ -373,7 +375,7 @@ function render_tile(pos) {
       var dt = row_dts[row_pos[1]];
       if(tile == "~") display_tile = (dt < 0)? ")" : "(";
     } else {
-      bg = ROT.Color.interpolate(bg, [0, 0, 0], .05);
+      bg = ROT.Color.interpolate(bg, colors.black, .05);
     }
   }
   if(tile == "]" || tile == "[") {
@@ -463,7 +465,7 @@ function draw() {
   }
 
   {
-    var fg = [255, 255, 255];
+    var fg = colors.white;
     var screen_pos = [0, 0];
     var bg = get_bg(screen_to_world(screen_pos));
     var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
