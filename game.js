@@ -633,7 +633,7 @@ function tick() {
       player_narration = "RAPIDS";
     }
     var tile = get_tile(player_pos);
-    if(tile == "[" || tile == "]") {
+    if(tile == "[" || tile == "]" || tile == "(" || tile == ")") {
       player_alive = false;
       player_narration = "CAR";
     }
@@ -685,7 +685,7 @@ function key_up(event) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = get_tile(new_pos);
       if(!in_gutter(new_pos[0]) || row_move_player[world_to_rows(new_pos)[1]]) {
-        if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]" || new_tile == "=" || new_tile == "T") {
+        if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]" || new_tile == "(" || new_tile == ")" || new_tile == "=" || new_tile == "T") {
           player_pos[0] += dp[0];
           player_pos[1] += dp[1];
           player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
@@ -693,7 +693,7 @@ function key_up(event) {
             player_alive = false;
             player_narration = "WATER";
           }
-          if(new_tile == "[" || new_tile == "]") {
+          if(new_tile == "[" || new_tile == "]" || new_tile == "(" || new_tile == ")") {
             player_alive = false;
             player_narration = "CAR";
           }
