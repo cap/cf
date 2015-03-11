@@ -683,6 +683,12 @@ function key_up(event) {
     // document.body.appendChild(img);
     window.open(display.getContainer().toDataURL("image/png"), "_blank");
   }
+  if(event.keyCode == ROT.VK_K) {
+    init_game();
+    window.removeEventListener("keyup", key_up);
+    tick();
+    return;
+  }
 
   var up = (event.keyCode == ROT.VK_W);
   var down = (event.keyCode == ROT.VK_S);
@@ -726,8 +732,6 @@ function key_up(event) {
       init_game();
     }
   }
-
-
 
   window.removeEventListener("keyup", key_up);
   tick();
