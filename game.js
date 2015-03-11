@@ -401,8 +401,8 @@ function render_tile(pos) {
     var fp = world_to_field(pos);
     if(valid_p(fp, field_shape)) {
       var v = visibility[fp[1]][fp[0]] * 255;
-      fg = ROT.Color.multiply(fg, [v, v, v]);
-      bg = ROT.Color.multiply(bg, [v, v, v]);
+      // fg = ROT.Color.multiply(fg, [v, v, v]);
+      // bg = ROT.Color.multiply(bg, [v, v, v]);
     }
   }
 
