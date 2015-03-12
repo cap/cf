@@ -43,7 +43,7 @@ var gen_type;
 var gen_end;
 var gen_first_end;
 
-var render_reachable = true;
+var render_reachable = false;
 
 var car_dts = [60, 120, 180, 240, 300, 360];
 var colors = {
@@ -136,6 +136,11 @@ function render_runs(row, runs) {
   }
 }
 
+function sign(x) {
+  if(x == 0) return 0;
+  return x / Math.abs(x);
+}
+
 function intersect_reachability(row_y, row_y_1) {
   var runs = find_runs(row_reachable[row_y]);
   var runs_1 = find_runs(row_reachable[row_y_1]);
@@ -155,12 +160,13 @@ function intersect_reachability(row_y, row_y_1) {
   render_runs(row_reachable[row_y], runs);
 }
 
-function gen_row() {
+function try_row() {
   var progress = gen_y;
   var row_y = gen_y % rows_shape[1];
   var row_y_1 = (gen_y - 1 + rows_shape[1]) % rows_shape[1];
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
+
   var dt = 0;
   var move_player = false;
   var full_type = {
@@ -214,9 +220,15 @@ function gen_row() {
       dt = rng_choose(
         [60, 90],
         [1, 1]);
-      if(rng_uniform() < .5) {
-        dt *= -1;
+      var sign_ps = [1, 1];
+      var sign_prev = sign(row_dts[row_y_1]);
+      if(sign_prev != 0) {
+        sign_ps[(sign_prev < 0)? 1 : 0] += 1;
       }
+      if(sign_prev == sign(row_dts[row_y_2])) {
+        sign_ps[(sign_prev < 0)? 0 : 1] = 0;
+      }
+      dt *= rng_choose([-1, 1], sign_ps);
       for(var x = 0; x < rows_shape[0]; ++x) {
         if(rng_uniform() < .5) {
           row[x] = "-";
@@ -269,6 +281,13 @@ function gen_row() {
   row_dts[row_y] = dt;
   row_types[row_y] = full_type;
   row_move_player[row_y] = move_player;
+}
+
+function check_reachability() {
+  var row_y = gen_y % rows_shape[1];
+  var row_y_1 = (gen_y - 1 + rows_shape[1]) % rows_shape[1];
+  var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
+  var row = rows[row_y];
 
   if(gen_y == 0) {
     for(var x = 0; x < field_shape[0]; ++x) {
@@ -282,17 +301,17 @@ function gen_row() {
       intersect_reachability(row_y, row_y_1);
     }
     if(gen_type == "road") {
-        var dir = row_dts[row_y] / Math.abs(row_dts[row_y]);
-        var runs = [];
-        var runs_1 = find_runs(row_reachable[row_y_1]);
-        if(runs_1.length > 0) {
-          if(dir > 0) {
-            runs.push([gutter_width, runs_1[runs_1.length - 1][1]]);
-          } else {
-            runs.push([runs_1[0][0], field_shape[0] - gutter_width]);
-          }
+      var dir = sign(row_dts[row_y]);
+      var runs = [];
+      var runs_1 = find_runs(row_reachable[row_y_1]);
+      if(runs_1.length > 0) {
+        if(dir > 0) {
+          runs.push([gutter_width, runs_1[runs_1.length - 1][1]]);
+        } else {
+          runs.push([runs_1[0][0], field_shape[0] - gutter_width]);
         }
-        render_runs(row_reachable[row_y], runs);
+      }
+      render_runs(row_reachable[row_y], runs);
     }
     if(gen_type == "railroad") {
       var runs_1 = find_runs(row_reachable[row_y_1]);
@@ -308,7 +327,7 @@ function gen_row() {
         }
         intersect_reachability(row_y, row_y_1);
       } else {
-        var dir = row_dts[row_y] / Math.abs(row_dts[row_y]);
+        var dir = sign(row_dts[row_y]);
         var offs = (Math.abs(row_dts[row_y]) < 120)? -dir : 0;
         var runs = [];
         var runs_1 = find_runs(row_reachable[row_y_1]);
@@ -325,13 +344,44 @@ function gen_row() {
       }
     }
   }
+  return find_runs(row_reachable[row_y]).length > 0;
+}
+
+function gen_row() {
+  var progress = gen_y;
+  var row_y = gen_y % rows_shape[1];
+  var row_y_1 = (gen_y - 1 + rows_shape[1]) % rows_shape[1];
+  var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
+  var row = rows[row_y];
+
+  var valid = false;
+  for(var i = 0; i < 5; ++i) {
+    try_row();
+    if(check_reachability()) {
+      valid = true;
+      break;
+    }
+  }
+  if(!valid) {
+    gen_type = "grass";
+    for(var i = 0; i < 5; ++i) {
+      try_row();
+      if(check_reachability()) {
+        valid = true;
+        break;
+      }
+    }
+    if(!valid) {
+      gen_type = "railroad";
+      try_row();
+    }
+  }
 
   ++gen_y;
   ++progress;
   if(gen_y == gen_end) {
     var states = ["grass", "railroad", "water", "road"];
     var ps = [1, 1, .7, 1];
-
 
     ps[states.indexOf("grass")] += Math.max(0, 1 - progress / 100);
     ps[states.indexOf(gen_type)] = 0;
@@ -923,7 +973,9 @@ return init;
 var __game = _game();
 
 window.onload = function() {
-  for(var i = 0; i < 1; i++) {
+  var copies = 1;
+  // copies = 25;
+  for(var i = 0; i < copies; i++) {
     __game();
   }
 }
