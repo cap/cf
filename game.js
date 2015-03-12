@@ -10,6 +10,7 @@ var rows;
 var row_types;
 var row_dts;
 var row_move_player;
+var row_reachable;
 var rows_shape;
 var key_handler;
 
@@ -41,6 +42,8 @@ var gen_y;
 var gen_type;
 var gen_end;
 var gen_first_end;
+
+var render_reachable = true;
 
 var car_dts = [60, 120, 180, 240, 300, 360];
 var colors = {
@@ -100,8 +103,56 @@ function rng_choose(values, ps) {
   return values[rng_discrete(ps)];
 }
 
+function find_runs(row) {
+  var runs = [];
+  var begin = -1;
+  for(var x = 0; x < row.length; ++x) {
+    if(row[x] == 1 && begin == -1) {
+      begin = x;
+    }
+    if(row[x] == 0 && begin != -1) {
+      runs.push([begin, x]);
+      begin = -1;
+    }
+  }
+  if(begin != -1) {
+    runs.push([begin, row.length]);
+  }
+  return runs;
+}
+
 function in_gutter(x) {
   return x < gutter_width || x >= field_shape[0] - gutter_width;
+}
+
+function render_runs(row, runs) {
+  for(var x = 0; x < field_shape[0]; ++x) {
+    row[x] = 0;
+  }
+  for(var i = 0; i < runs.length; ++i) {
+    for(var x = runs[i][0]; x < runs[i][1]; ++x) {
+      row[x] = 1;
+    }
+  }
+}
+
+function intersect_reachability(row_y, row_y_1) {
+  var runs = find_runs(row_reachable[row_y]);
+  var runs_1 = find_runs(row_reachable[row_y_1]);
+  for(var i = 0; i < runs.length; ++i) {
+    var connected = false;
+    var ra = runs[i];
+    for(var j = 0; j < runs_1.length; ++j) {
+      var rb = runs_1[j];
+      var min = Math.max(ra[0], rb[0]);
+      var max = Math.min(ra[1], rb[1]);
+      connected |= (max > min);
+    }
+    if(!connected) {
+      runs[i] = [0, 0];
+    }
+  }
+  render_runs(row_reachable[row_y], runs);
 }
 
 function gen_row() {
@@ -215,6 +266,46 @@ function gen_row() {
     }
   }
 
+  if(gen_y == 0) {
+    for(var x = 0; x < field_shape[0]; ++x) {
+      row_reachable[row_y][x] = 1;
+    }
+  } else {
+    if(gen_type == "grass") {
+      for(var x = 0; x < field_shape[0]; ++x) {
+        row_reachable[row_y][x] = (rows[row_y][x] == "*")? 0 : 1;
+      }
+      intersect_reachability(row_y, row_y_1);
+    }
+    if(gen_type == "road" || gen_type == "railroad") {
+      var runs_1 = find_runs(row_reachable[row_y_1]);
+      var unreachable = (runs_1.length == 0);
+      for(var x = 0; x < field_shape[0]; ++x) {
+        row_reachable[row_y][x] = (in_gutter(x) || unreachable)? 0 : 1;
+      }
+    }
+    if(gen_type == "water") {
+      if(full_type.subtype == "pad") {
+        for(var x = 0; x < field_shape[0]; ++x) {
+          row_reachable[row_y][x] = (rows[row_y][x] == "o")? 1 : 0;
+        }
+        intersect_reachability(row_y, row_y_1);
+      } else {
+        var dir = row_dts[row_y] / Math.abs(row_dts[row_y]);
+        var runs = [];
+        var runs_1 = find_runs(row_reachable[row_y_1]);
+        if(runs_1.length > 0) {
+          if(dir < 0) {
+            runs.push([gutter_width, runs_1[runs_1.length - 1][1]]);
+          } else {
+            runs.push([runs_1[0][0], field_shape[0] - gutter_width]);
+          }
+        }
+        render_runs(row_reachable[row_y], runs);
+      }
+    }
+  }
+
   row_dts[row_y] = dt;
   row_types[row_y] = full_type;
   row_move_player[row_y] = move_player;
@@ -292,10 +383,10 @@ function init() {
   var font_size = 50;
 
   // tuning settings
-  // screen_shape = [13, 350];
-  // field_shape = [13, 350];
-  // rows_shape = [13, 500];
-  // font_size = 4;
+  // screen_shape = [13, 50];
+  // field_shape = [13, 50];
+  // rows_shape = [50, 500];
+  // font_size = 20;
 
   // screenshot settings
   // screen_shape = [15, 6];
@@ -320,11 +411,13 @@ function init() {
   }
 
   rows = new Array(rows_shape[1]);
+  row_reachable = new Array(rows_shape[1]);
   row_dts = new Array(rows_shape[1]);
   row_types = new Array(rows_shape[1]);
   row_move_player = new Array(rows_shape[1]);
   for(var i = 0; i < rows_shape[1]; ++i) {
     rows[i] = new Array(rows_shape[0]);
+    row_reachable[i] = new Array(field_shape[0]);
     row_types[i] = "";
     row_dts[i] = 0;
     row_move_player[i] = false;
@@ -485,6 +578,13 @@ function render_tile(pos) {
       var v = visibility[fp[1]][fp[0]] * 255;
       // fg = ROT.Color.multiply(fg, [v, v, v]);
       // bg = ROT.Color.multiply(bg, [v, v, v]);
+    }
+  }
+
+  if(render_reachable) {
+    if(!row_reachable[row_pos[1]][row_pos[0]]) {
+      fg = ROT.Color.interpolate(fg, colors.black, .75);
+      bg = ROT.Color.interpolate(bg, colors.black, .75);
     }
   }
 
