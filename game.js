@@ -266,6 +266,10 @@ function gen_row() {
     }
   }
 
+  row_dts[row_y] = dt;
+  row_types[row_y] = full_type;
+  row_move_player[row_y] = move_player;
+
   if(gen_y == 0) {
     for(var x = 0; x < field_shape[0]; ++x) {
       row_reachable[row_y][x] = 1;
@@ -277,7 +281,20 @@ function gen_row() {
       }
       intersect_reachability(row_y, row_y_1);
     }
-    if(gen_type == "road" || gen_type == "railroad") {
+    if(gen_type == "road") {
+        var dir = row_dts[row_y] / Math.abs(row_dts[row_y]);
+        var runs = [];
+        var runs_1 = find_runs(row_reachable[row_y_1]);
+        if(runs_1.length > 0) {
+          if(dir > 0) {
+            runs.push([gutter_width, runs_1[runs_1.length - 1][1]]);
+          } else {
+            runs.push([runs_1[0][0], field_shape[0] - gutter_width]);
+          }
+        }
+        render_runs(row_reachable[row_y], runs);
+    }
+    if(gen_type == "railroad") {
       var runs_1 = find_runs(row_reachable[row_y_1]);
       var unreachable = (runs_1.length == 0);
       for(var x = 0; x < field_shape[0]; ++x) {
@@ -285,30 +302,30 @@ function gen_row() {
       }
     }
     if(gen_type == "water") {
-      if(full_type.subtype == "pad") {
+      if(row_types[row_y].subtype == "pad") {
         for(var x = 0; x < field_shape[0]; ++x) {
           row_reachable[row_y][x] = (rows[row_y][x] == "o")? 1 : 0;
         }
         intersect_reachability(row_y, row_y_1);
       } else {
         var dir = row_dts[row_y] / Math.abs(row_dts[row_y]);
+        var offs = (Math.abs(row_dts[row_y]) < 120)? -dir : 0;
         var runs = [];
         var runs_1 = find_runs(row_reachable[row_y_1]);
         if(runs_1.length > 0) {
-          if(dir < 0) {
-            runs.push([gutter_width, runs_1[runs_1.length - 1][1]]);
-          } else {
-            runs.push([runs_1[0][0], field_shape[0] - gutter_width]);
+          var r;
+          if(dir > 0) { // to the left
+            r = [gutter_width, runs_1[runs_1.length - 1][1] + offs];
+          } else { // to the right
+            r = [runs_1[0][0] + offs, field_shape[0] - gutter_width];
           }
+          runs.push(r);
         }
         render_runs(row_reachable[row_y], runs);
       }
     }
   }
 
-  row_dts[row_y] = dt;
-  row_types[row_y] = full_type;
-  row_move_player[row_y] = move_player;
   ++gen_y;
   ++progress;
   if(gen_y == gen_end) {
@@ -383,10 +400,10 @@ function init() {
   var font_size = 50;
 
   // tuning settings
-  // screen_shape = [13, 50];
-  // field_shape = [13, 50];
+  // screen_shape = [13, 200];
+  // field_shape = [13, 200];
   // rows_shape = [50, 500];
-  // font_size = 20;
+  // font_size = 5;
 
   // screenshot settings
   // screen_shape = [15, 6];
@@ -905,4 +922,8 @@ return init;
 
 var __game = _game();
 
-window.onload = function() { __game(); }
+window.onload = function() {
+  for(var i = 0; i < 1; i++) {
+    __game();
+  }
+}
