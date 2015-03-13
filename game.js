@@ -33,7 +33,6 @@ var player_score;
 var player_narration;
 var player_gifts;
 var player_gifts_remaining;
-var player_gift_text;
 
 var camera_begin;
 var camera_end;
@@ -41,7 +40,6 @@ var camera_pos;
 var camera_t;
 
 var show_title;
-var show_gift_text;
 
 var gen_y;
 var gen_type;
@@ -284,13 +282,13 @@ function try_row() {
         row[x] = "=";
       }
     }
-  } else if(gen_type == "prize") {
-    var prize_y = gen_y - (gen_end - 3);
-    if(prize_y != 1) {
+  } else if(gen_type == "gift") {
+    var gift_y = gen_y - (gen_end - 3);
+    if(gift_y != 1) {
       for(var x = 0; x < field_shape[0]; ++x) {
         row[x] = "+";
       }
-    } else if(prize_y == 1) {
+    } else if(gift_y == 1) {
       var field_center = Math.floor(field_shape[0] / 2);
       for(var x = 0; x < field_shape[0]; ++x) {
         if(x == field_center || x == field_center - 2 || x == field_center + 2) {
@@ -367,7 +365,7 @@ function check_reachability() {
         render_runs(row_reachable[row_y], runs);
       }
     }
-    if(gen_type == "prize") {
+    if(gen_type == "gift") {
       for(var x = 0; x < field_shape[0]; ++x) {
         row_reachable[row_y][x] = 1;
       }
@@ -384,7 +382,7 @@ function gen_row() {
   var row = rows[row_y];
 
   if(progress % 50 == 0) {
-    gen_type = "prize";
+    gen_type = "gift";
     gen_end = gen_y + 3;
   }
 
@@ -792,6 +790,13 @@ function draw() {
   // kestrel
   var fg = [141, 83,  80];
   if(!kestrel_alive) fg = colors.black;
+  if(render_visible || player_gifts.blind) {
+    var fp = world_to_field(kestrel_pos);
+    if(valid_p(fp, field_shape)) {
+      var v = visibility[fp[1]][fp[0]] * 255;
+      fg = ROT.Color.multiply(fg, [v, v, v]);
+    }
+  }
   var tile = "K";
   var bg = get_bg(kestrel_pos);
   var pos = world_to_screen(kestrel_pos);
@@ -802,7 +807,7 @@ function draw() {
     var tile = "@";
     if(!player_alive) {
       fg = "#000";
-      tile = "X";
+      tile = "@";
     }
     var bg = ROT.Color.toRGB(get_bg(player_pos));
     var pos = world_to_screen(player_pos);
@@ -819,22 +824,15 @@ function draw() {
         screen_pos[0], screen_pos[1], col + player_score.toString());
     }
     var x = Math.floor((screen_shape[0] - player_narration.length) / 2);
-    var bg = get_bg(screen_to_world([x, 0]));
+    var bg = get_bg(screen_to_world([x, screen_shape[1] - 1]));
     var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
-    display.drawText(x, 0, col + player_narration);
+    display.drawText(x, screen_shape[1] - 1, col + player_narration);
   }
 
   if(show_title) {
     var mid = [Math.floor(screen_shape[0] / 2), Math.floor(screen_shape[1] / 2)];
     display.drawText(mid[0] - 2, mid[1] - 1, "%c{#fff}COPY");
     display.drawText(mid[0] - 3, mid[1], "%c{#fff}FROGUE");
-  }
-  if(show_gift_text) {
-    var words = player_gift_text.split(" ");
-    var mid = [Math.floor(screen_shape[0] / 2), Math.floor(screen_shape[1] / 2)];
-    for(var i = 0; i < words.length; ++i) {
-      display.drawText(mid[0] - Math.floor(words[i].length / 2), mid[1] + i + 1, "%c{#fff}" + words[i]);
-    }
   }
 }
 
@@ -991,22 +989,23 @@ function tick() {
       switch(gift) {
       case "blind": {
         player_gifts.blind = true;
-        player_gift_text = "BLIND";
+        player_narration = "BLIND";
       } break;
       case "map": {
         player_gifts.map = true;
-        player_gift_text = "MAGIC MAP";
+        player_narration = "MAGIC MAP";
       } break;
       case "poison": {
         player_gifts.poison = true;
-        player_gift_text = "KESTREL POISON";
+        player_narration = "KESTRELPOISON";
       } break;
       }
-      show_gift_text = true;
+      show_narration = true;
     }
     if(kestrel_pos[0] == player_pos[0] && kestrel_pos[1] == player_pos[1]) {
       if(player_gifts.poison) {
         kestrel_alive = false;
+        player_narration = "";
       } else {
         kestrel_v = 0;
         player_alive = false;
@@ -1046,7 +1045,6 @@ function input(event) {
 
   if(!(up || down || left || right || wait)) return;
   show_title = false;
-  show_gift_text = false;
 
   var dp = [0, 0];
   if(up) dp[1]++;
