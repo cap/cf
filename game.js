@@ -286,7 +286,7 @@ function try_row() {
     var gift_y = gen_y - (gen_end - 3);
     if(gift_y != 1) {
       for(var x = 0; x < field_shape[0]; ++x) {
-        row[x] = "+";
+        row[x] = "_";
       }
     } else if(gift_y == 1) {
       var field_center = Math.floor(field_shape[0] / 2);
@@ -296,6 +296,39 @@ function try_row() {
         } else {
           row[x] = "!";
         }
+      }
+    }
+  } else if(gen_type == "end") {
+    var gift_y = gen_y - (gen_end - 15);
+    if(gift_y < 2) {
+      for(var x = 0; x < field_shape[0]; ++x) {
+        row[x] = "+";
+      }
+    } else if(gift_y == 2) {
+      var field_center = Math.floor(field_shape[0] / 2);
+      for(var x = 0; x < field_shape[0]; ++x) {
+        if(x == field_center || x == field_center - 2 || x == field_center + 2) {
+          row[x] = "?";
+        } else {
+          row[x] = "!";
+        }
+      }
+    } else if(gift_y == 5) {
+      for(var x = 0; x < rows_shape[0]; ++x) {
+        row[x] = "_";
+      }
+      var cx = Math.floor(field_shape[0] / 2);
+      row[cx - 2] = "(";
+      row[cx + 1] = "]";
+    } else if(gift_y == 4) {
+      for(var x = 0; x < rows_shape[0]; ++x) {
+        row[x] = "_";
+      }
+      var cx = Math.floor(field_shape[0] / 2);
+      row[cx - 1] = "\\";
+    } else {
+      for(var x = 0; x < field_shape[0]; ++x) {
+        row[x] = "_";
       }
     }
   }
@@ -365,9 +398,9 @@ function check_reachability() {
         render_runs(row_reachable[row_y], runs);
       }
     }
-    if(gen_type == "gift") {
+    if(gen_type == "gift" || gen_type == "end") {
       for(var x = 0; x < field_shape[0]; ++x) {
-        row_reachable[row_y][x] = 1;
+        row_reachable[row_y][x] = in_gutter(x)? 0 : 1;
       }
     }
   }
@@ -381,9 +414,14 @@ function gen_row() {
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
 
-  if(progress % 50 == 0) {
+  if(progress % 20 == 0) {
     gen_type = "gift";
     gen_end = gen_y + 3;
+  }
+
+  if(progress == 52) {
+    gen_type = "end";
+    gen_end = gen_y + 15;
   }
 
   var valid = false;
@@ -651,11 +689,13 @@ function render_tile(pos) {
   case "#":
   case ")":
   case "(":
+  case "\\":
+  case "/":
   case "]":
   case "[": {
     bg = colors.road;
     var dt = row_dts[row_pos[1]];
-    var idx = car_dts.indexOf(Math.abs(dt));
+    var idx = (dt == 0)? 0 : car_dts.indexOf(Math.abs(dt));
     fg = colors.cars[idx];
   } break;
   case "=": {
@@ -667,8 +707,7 @@ function render_tile(pos) {
     fg = colors.water;
   } break;
   case "+": {
-    bg = colors.road;
-    // bg = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.road : colors.road_stripe;
+    bg = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.road : colors.road_stripe;
   } break;
   case "!": {
     fg = colors.road_stripe;
@@ -697,15 +736,17 @@ function render_tile(pos) {
   }
   if(tile == "]" || tile == "[") {
     var dt = Math.abs(row_dts[row_pos[1]]);
-    var time = game_time - (game_time % 60);
-    var time_until_move = dt - 60 - (time % dt);
-    var turns_until_move = time_until_move / 60;
-    var turns = dt / 60;
-    var readiness = 1 - (turns_until_move / turns);
-    var c = readiness * 255;
-    var c0 = ROT.Color.interpolate(bg, fg, .5);
-    var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
-    fg = ROT.Color.interpolate(c0, c1, readiness);
+    if(dt != 0) {
+      var time = game_time - (game_time % 60);
+      var time_until_move = dt - 60 - (time % dt);
+      var turns_until_move = time_until_move / 60;
+      var turns = dt / 60;
+      var readiness = 1 - (turns_until_move / turns);
+      var c = readiness * 255;
+      var c0 = ROT.Color.interpolate(bg, fg, .5);
+      var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
+      fg = ROT.Color.interpolate(c0, c1, readiness);
+    }
   }
 
   if(render_visible || player_gifts.blind) {
@@ -978,29 +1019,32 @@ function tick() {
         }
       }
 
-      var probs = [];
-      for(var i = 0; i < player_gifts_remaining.length; ++i) {
-        probs[i] = 1;
-      }
-      var index = rng_discrete(probs);
-      var gift = player_gifts_remaining[index];
-      player_gifts_remaining.splice(index, 1);
+      if(row_types[row_pos[1]].type == "end") {
+        player_narration = "KEYS";
+      } else {
+        var probs = [];
+        for(var i = 0; i < player_gifts_remaining.length; ++i) {
+          probs[i] = 1;
+        }
+        var index = rng_discrete(probs);
+        var gift = player_gifts_remaining[index];
+        player_gifts_remaining.splice(index, 1);
 
-      switch(gift) {
-      case "blind": {
-        player_gifts.blind = true;
-        player_narration = "BLIND";
-      } break;
-      case "map": {
-        player_gifts.map = true;
-        player_narration = "MAGIC MAP";
-      } break;
-      case "poison": {
-        player_gifts.poison = true;
-        player_narration = "KESTRELPOISON";
-      } break;
+        switch(gift) {
+        case "blind": {
+          player_gifts.blind = true;
+          player_narration = "BLIND";
+        } break;
+        case "map": {
+          player_gifts.map = true;
+          player_narration = "MAGIC MAP";
+        } break;
+        case "poison": {
+          player_gifts.poison = true;
+          player_narration = "KESTRELPOISON";
+        } break;
+        }
       }
-      show_narration = true;
     }
     if(kestrel_pos[0] == player_pos[0] && kestrel_pos[1] == player_pos[1]) {
       if(player_gifts.poison) {
