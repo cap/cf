@@ -15,6 +15,7 @@ var rows_shape;
 var key_handler;
 
 var game_time;
+var tick_dt = 5;
 
 var kestrel_homing;
 var kestrel_pos;
@@ -25,7 +26,7 @@ var kestrel_dty;
 var kestrel_range;
 var kestrel_dead_y;
 var kestrel_alive;
-var kestrel_glove;
+var kestrel_tamed;
 
 var player_alive;
 var player_start_pos;
@@ -34,6 +35,7 @@ var player_score;
 var player_narration;
 var player_gifts;
 var player_gifts_remaining;
+var player_driving;
 
 var camera_begin;
 var camera_end;
@@ -41,6 +43,8 @@ var camera_pos;
 var camera_t;
 
 var end_t;
+var end_active;
+var end_y = 52;
 
 var show_title;
 
@@ -302,7 +306,7 @@ function try_row() {
       }
     }
   } else if(gen_type == "end") {
-    var gift_y = gen_y - (gen_end - 15);
+    var gift_y = gen_y - (gen_end - 16);
     if(gift_y < 2) {
       for(var x = 0; x < field_shape[0]; ++x) {
         row[x] = "+";
@@ -316,23 +320,24 @@ function try_row() {
           row[x] = "!";
         }
       }
-    } else if(gift_y == 5) {
+    } else if(gift_y == 9) {
       for(var x = 0; x < rows_shape[0]; ++x) {
         row[x] = "_";
       }
       var cx = Math.floor(field_shape[0] / 2);
-      row[cx - 1] = "(";
-      row[cx - 0] = "E";
-      row[cx + 2] = "]";
-    } else if(gift_y == 4) {
-      for(var x = 0; x < rows_shape[0]; ++x) {
-        row[x] = "_";
-      }
-      var cx = Math.floor(field_shape[0] / 2);
-      row[cx - 0] = "\\";
+      row[cx - 1] = "[";
+      row[cx + 1] = "E";
+      row[cx + 2] = ")";
     } else {
-      for(var x = 0; x < field_shape[0]; ++x) {
-        row[x] = "_";
+      for(var x = 0; x < rows_shape[0]; ++x) {
+        row[x] = ".";
+        if(x > field_shape[0] || gift_y > 9) {
+          if(rng_uniform() < .4) row[x] = "*";
+        }
+      }
+      if(gift_y == 8) {
+        var cx = Math.floor(field_shape[0] / 2);
+        row[cx + 1] = "/";
       }
     }
   }
@@ -418,14 +423,14 @@ function gen_row() {
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
 
-  if(progress % 20 == 0) {
+  if(gen_type != "end" && progress % 20 == 0) {
     gen_type = "gift";
     gen_end = gen_y + 3;
   }
 
-  if(progress == 52) {
+  if(progress == end_y) {
     gen_type = "end";
-    gen_end = gen_y + 15;
+    gen_end = gen_y + 16;
   }
 
   var valid = false;
@@ -493,7 +498,7 @@ function init_game() {
   camera_t = 0;
 
   kestrel_alive = true;
-  kestrel_glove = false;
+  kestrel_tamed = false;
   kestrel_homing = false;
   kestrel_pos = [Math.floor(screen_shape[1] / 2), 0];
   kestrel_v = (rng_uniform() < .5)? 1 : -1;
@@ -516,6 +521,7 @@ function init_game() {
     // crosswalk: false;
   };
   player_gifts_remaining = Object.keys(player_gifts);
+  player_driving = false;
 
   show_title = true;
 }
@@ -694,14 +700,20 @@ function render_tile(pos) {
   case "#":
   case ")":
   case "(":
-  case "\\":
-  case "/":
   case "]":
   case "[": {
     bg = colors.road;
     var dt = row_dts[row_pos[1]];
     var idx = (dt == 0)? 0 : car_dts.indexOf(Math.abs(dt));
     fg = colors.cars[idx];
+  } break;
+  case "/": {
+    if(pos[1] % 2 == 0) {
+      bg = colors.light_grass;
+    } else {
+      bg = colors.dark_grass;
+    }
+    fg = colors.cars[0];
   } break;
   case "E": {
     bg = colors.road;
@@ -864,6 +876,16 @@ function draw() {
     display.draw(pos[0], pos[1], tile, fg, bg);
   }
 
+  if(player_driving) {
+    var fg = colors.cars[0];
+    var bg = colors.road;
+    var pos = world_to_screen(player_pos);
+    pos[0] -= 2;
+    display.draw(pos[0], pos[1], "[", ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
+    pos[0] += 3;
+    display.draw(pos[0], pos[1], ")", ROT.Color.toRGB(fg), ROT.Color.toRGB(bg));
+  }
+
   {
     var fg = colors.white;
     var screen_pos = [0, 0];
@@ -887,10 +909,31 @@ function draw() {
 }
 
 function end_tick() {
-  end_t += .05;
+  for(var i = 0; i < 10; ++i) {
+    game_time += tick_dt;
+    end_t += .005;
+    if(end_t > .5 && kestrel_tamed && kestrel_pos[0] < player_pos[0] - 1) {
+      if(game_time % kestrel_dt == 0) kestrel_pos[0]++;
+    }
+    if(end_t > 1) {
+      var row_pos = world_to_rows(player_pos);
+      for(var x = 0; x < field_shape[0]; ++x) {
+        rows[row_pos[1]][x] = "_";
+      }
+      player_narration = "FIN";
+      player_driving = true;
+      if(game_time % 60 == 0) {
+        player_pos[0]++;
+        camera_pos[0]++;
+        if(kestrel_tamed) {
+          kestrel_pos[0] = player_pos[0] - 1;
+        }
+      }
+    }
+  }
   render();
   draw();
-  setTimeout(end_tick, 5);
+  setTimeout(end_tick, 50);
 }
 
 function camera_tick() {
@@ -949,8 +992,29 @@ function render() {
   }
 }
 
+function move_player() {
+  var world_y = player_pos[1];
+  var row_y = world_to_rows(player_pos)[1];
+  var move_player = row_move_player[row_y];
+  var dt = Math.abs(row_dts[row_y]);
+  var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
+  if(move_player) {
+    if(player_alive && game_time % dt == 0) {
+      player_pos[0] -= dx;
+    }
+  }
+}
+
 function tick() {
-  {
+  if(end_active) {
+    var ey = end_y - gen_base_progress;
+    if(player_pos[1] >= ey + 5 && camera_pos[1] != ey + 3) {
+      camera_t = 0;
+      camera_begin = camera_pos[1];
+      camera_end = ey + 3;
+      return camera_tick();
+    }
+  } else {
     var trigger = 3;
     var dy = player_pos[1] - camera_pos[1];
     if(dy >= screen_shape[1] - trigger) {
@@ -966,32 +1030,16 @@ function tick() {
     }
   }
 
-  var tick_dt = 5;
   game_time += tick_dt;
 
   while(gen_y - camera_pos[1] < screen_shape[1]) {
     gen_row();
   }
 
-  {
-    var world_y = player_pos[1];
-    var row_y = world_to_rows(player_pos)[1];
-    var move_player = row_move_player[row_y];
-    var dt = Math.abs(row_dts[row_y]);
-    var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
-    if(move_player) {
-      if(player_alive && game_time % dt == 0) {
-        player_pos[0] -= dx;
-      }
-    }
-  }
-
+  move_player();
   render();
 
-
-
-
-  if(kestrel_alive && !kestrel_glove) {
+  if(kestrel_alive && !kestrel_tamed) {
     if(kestrel_homing) {
       kestrel_pos[1] = player_pos[1];
     } else {
@@ -1025,7 +1073,6 @@ function tick() {
     }
   }
 
-
   if(player_alive) {
     var row_pos = world_to_rows(player_pos);
     if(in_gutter(player_pos[0])) {
@@ -1044,9 +1091,15 @@ function tick() {
     if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
       for(var x = 0; x < field_shape[0]; ++x) {
-        rows[row_pos[1] - 1][x] = "_";
+        rows[row_pos[1] - 1][x] = ".";
       }
       player_narration = "";
+      kestrel_tamed = true;
+      if(kestrel_tamed) {
+        kestrel_pos = player_pos.slice();
+        kestrel_pos[0] -= 10;
+      }
+      end_t = 0;
       return end_tick();
     }
     if(tile == "?") {
@@ -1058,6 +1111,7 @@ function tick() {
 
       if(row_types[row_pos[1]].type == "end") {
         player_narration = "KEYS";
+        end_active = true;
       } else {
         var probs = [];
         for(var i = 0; i < player_gifts_remaining.length; ++i) {
