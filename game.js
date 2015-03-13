@@ -25,6 +25,7 @@ var kestrel_dty;
 var kestrel_range;
 var kestrel_dead_y;
 var kestrel_alive;
+var kestrel_glove;
 
 var player_alive;
 var player_start_pos;
@@ -38,6 +39,8 @@ var camera_begin;
 var camera_end;
 var camera_pos;
 var camera_t;
+
+var end_t;
 
 var show_title;
 
@@ -318,14 +321,15 @@ function try_row() {
         row[x] = "_";
       }
       var cx = Math.floor(field_shape[0] / 2);
-      row[cx - 2] = "(";
-      row[cx + 1] = "]";
+      row[cx - 1] = "(";
+      row[cx - 0] = "E";
+      row[cx + 2] = "]";
     } else if(gift_y == 4) {
       for(var x = 0; x < rows_shape[0]; ++x) {
         row[x] = "_";
       }
       var cx = Math.floor(field_shape[0] / 2);
-      row[cx - 1] = "\\";
+      row[cx - 0] = "\\";
     } else {
       for(var x = 0; x < field_shape[0]; ++x) {
         row[x] = "_";
@@ -489,6 +493,7 @@ function init_game() {
   camera_t = 0;
 
   kestrel_alive = true;
+  kestrel_glove = false;
   kestrel_homing = false;
   kestrel_pos = [Math.floor(screen_shape[1] / 2), 0];
   kestrel_v = (rng_uniform() < .5)? 1 : -1;
@@ -698,6 +703,10 @@ function render_tile(pos) {
     var idx = (dt == 0)? 0 : car_dts.indexOf(Math.abs(dt));
     fg = colors.cars[idx];
   } break;
+  case "E": {
+    bg = colors.road;
+    fg = colors.road;
+  } break;
   case "=": {
     bg = colors.road;
     fg = colors.road_stripe;
@@ -877,6 +886,13 @@ function draw() {
   }
 }
 
+function end_tick() {
+  end_t += .05;
+  render();
+  draw();
+  setTimeout(end_tick, 5);
+}
+
 function camera_tick() {
   camera_t += .05;
 
@@ -915,6 +931,24 @@ function camera_tick() {
   }
 }
 
+function render() {
+  for(var y = 0; y < field_shape[1]; ++y) {
+    var world_y = field_to_world([0, y])[1];
+    var row_y = world_to_rows([0, world_y])[1];
+    var dt = Math.abs(row_dts[row_y]);
+    var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
+    var cycles = (dt == 0)? 0 : Math.floor(game_time / dt);
+    var x0 = (dx <= 0)? 0 : rows_shape[0] - 1 - field_shape[0];
+    x0 += dx * cycles;
+    while(x0 < 0) x0 += rows_shape[0];
+
+    for(var x = 0; x < field_shape[0]; ++x) {
+      var row_pos = field_to_rows([x + x0, y]);
+      field[y][x] = rows[row_pos[1]][row_pos[0]];
+    }
+  }
+}
+
 function tick() {
   {
     var trigger = 3;
@@ -939,30 +973,25 @@ function tick() {
     gen_row();
   }
 
-  for(var y = 0; y < field_shape[1]; ++y) {
-    var world_y = field_to_world([0, y])[1];
-    var row_y = world_to_rows([0, world_y])[1];
+  {
+    var world_y = player_pos[1];
+    var row_y = world_to_rows(player_pos)[1];
+    var move_player = row_move_player[row_y];
     var dt = Math.abs(row_dts[row_y]);
     var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
-    var cycles = (dt == 0)? 0 : Math.floor(game_time / dt);
-    var x0 = (dx <= 0)? 0 : rows_shape[0] - 1 - field_shape[0];
-    x0 += dx * cycles;
-    while(x0 < 0) x0 += rows_shape[0];
-
-    var move_player = row_move_player[row_y];
     if(move_player) {
-      if(player_alive && player_pos[1] == world_y && game_time % dt == 0) {
+      if(player_alive && game_time % dt == 0) {
         player_pos[0] -= dx;
       }
     }
-
-    for(var x = 0; x < field_shape[0]; ++x) {
-      var row_pos = field_to_rows([x + x0, y]);
-      field[y][x] = rows[row_pos[1]][row_pos[0]];
-    }
   }
 
-  if(kestrel_alive) {
+  render();
+
+
+
+
+  if(kestrel_alive && !kestrel_glove) {
     if(kestrel_homing) {
       kestrel_pos[1] = player_pos[1];
     } else {
@@ -998,6 +1027,7 @@ function tick() {
 
 
   if(player_alive) {
+    var row_pos = world_to_rows(player_pos);
     if(in_gutter(player_pos[0])) {
       player_alive = false;
       player_narration = "RAPIDS";
@@ -1011,8 +1041,15 @@ function tick() {
       player_alive = false;
       player_narration = "TRAIN";
     }
-    if(tile == "?") {
+    if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
+      for(var x = 0; x < field_shape[0]; ++x) {
+        rows[row_pos[1] - 1][x] = "_";
+      }
+      player_narration = "";
+      return end_tick();
+    }
+    if(tile == "?") {
       for(var x = 0; x < field_shape[0]; ++x) {
         if(rows[row_pos[1]][x] == "?") {
           rows[row_pos[1]][x] = "_";
@@ -1101,7 +1138,25 @@ function input(event) {
       var new_pos = [player_pos[0] + dp[0], player_pos[1] + dp[1]];
       var new_tile = get_tile(new_pos);
       if(!in_gutter(new_pos[0]) || row_move_player[world_to_rows(new_pos)[1]]) {
-        if(new_tile == "." || new_tile == "o" || new_tile == "~" || new_tile == "-" || new_tile == "_" || new_tile == "[" || new_tile == "]" || new_tile == "(" || new_tile == ")" || new_tile == "=" || new_tile == "T" || new_tile == "+" || new_tile == "?") {
+        var row_pos = world_to_rows(player_pos);
+        var passable = false;
+        switch(new_tile) {
+          case ".":
+          case "o":
+          case "~":
+          case "-":
+          case "_":
+          case "=":
+          case "T":
+          case "+":
+          case "?":
+          case "E": passable = true; break;
+          case "[":
+          case "]":
+          case "(":
+          case ")": passable = (row_types[row_pos[1]].type != "end"); break;
+        }
+        if(passable) {
           player_pos[0] += dp[0];
           player_pos[1] += dp[1];
           player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
