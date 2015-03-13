@@ -44,6 +44,8 @@ var gen_end;
 var gen_first_end;
 
 var render_reachable = false;
+var render_visible = false;
+var render_skew = 0;
 
 var car_dts = [60, 120, 180, 240, 300, 360];
 var colors = {
@@ -402,7 +404,7 @@ function gen_row() {
       }
 
       len = Math.max(0, Math.floor(rng_normal(mean, sd)));
-      // len = Math.floor(rng_uniform() * (gen_y / 25));
+      // len = Math.floor(rng_uniform() * (progress / 25));
     }
 
     gen_end = gen_y + 1 + len;
@@ -527,7 +529,15 @@ function light_passes(x, y) {
 }
 
 function world_to_screen(pos) {
-  return [pos[0] - camera_pos[0], screen_shape[1] - 1 - (pos[1] - camera_pos[1])];
+  var p = [pos[0], pos[1]];
+  if(render_skew > 0) {
+      p[1] -= Math.floor(p[0] / render_skew);
+  }
+  var s = [p[0] - camera_pos[0], screen_shape[1] - 1 - (p[1] - camera_pos[1])];
+  if(render_skew > 0) {
+    s[1] -= 5;
+  }
+  return s;
 }
 
 function screen_to_world(pos) {
@@ -639,7 +649,7 @@ function render_tile(pos) {
     fg = ROT.Color.interpolate(c0, c1, readiness);
   }
 
-  {
+  if(render_visible) {
     var fp = world_to_field(pos);
     if(valid_p(fp, field_shape)) {
       var v = visibility[fp[1]][fp[0]] * 255;
@@ -650,10 +660,13 @@ function render_tile(pos) {
 
   if(render_reachable) {
     if(!row_reachable[row_pos[1]][row_pos[0]]) {
-      fg = ROT.Color.interpolate(fg, colors.black, .75);
-      bg = ROT.Color.interpolate(bg, colors.black, .75);
+      fg = ROT.Color.interpolate(fg, colors.black, .5);
+      bg = ROT.Color.interpolate(bg, colors.black, .5);
     }
   }
+
+  // fg = ROT.Color.interpolate(fg, colors.black, .75);
+  // bg = ROT.Color.interpolate(bg, colors.black, .75);
 
   return {
     tile: display_tile,
