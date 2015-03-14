@@ -46,6 +46,7 @@ var end_t;
 var end_active;
 var end_y = 52;
 var end_y = 82;
+var gift_dy = 20;
 
 var show_title;
 
@@ -53,7 +54,7 @@ var gen_y;
 var gen_type;
 var gen_end;
 var gen_first_end;
-var gen_base_progress = 45;
+var gen_base_progress = 50;
 
 var render_reachable = false;
 var render_visible = false;
@@ -291,12 +292,12 @@ function try_row() {
       }
     }
   } else if(gen_type == "gift") {
-    var gift_y = gen_y - (gen_end - 3);
-    if(gift_y != 1) {
+    var gift_y = gen_y - (gen_end - 4);
+    if(gift_y < 2) {
       for(var x = 0; x < field_shape[0]; ++x) {
-        row[x] = "_";
+        row[x] = "+";
       }
-    } else if(gift_y == 1) {
+    } else if(gift_y == 2) {
       full_type.subtype = "gate";
       var field_center = Math.floor(field_shape[0] / 2);
       for(var x = 0; x < field_shape[0]; ++x) {
@@ -305,6 +306,11 @@ function try_row() {
         } else {
           row[x] = "!";
         }
+      }
+    } else {
+      for(var x = 0; x < rows_shape[0]; ++x) {
+        row[x] = ".";
+        if(in_gutter(x)) row[x] = "*";
       }
     }
   } else if(gen_type == "end") {
@@ -431,9 +437,9 @@ function gen_row() {
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
 
-  if(gen_type != "end" && progress % 20 == 0) {
+  if(gen_type != "end" && progress % gift_dy == 0) {
     gen_type = "gift";
-    gen_end = gen_y + 3;
+    gen_end = gen_y + 4;
   }
 
   if(progress == end_y) {
@@ -743,7 +749,8 @@ function render_tile(pos) {
       begin = colors.road;
       end = colors.black;
     }
-    bg = ROT.Color.interpolate(begin, end, .5);
+    var alpha = Math.floor(pos[1] / gift_dy) / 4;
+    bg = ROT.Color.interpolate(begin, end, alpha);
   } break;
   case "!": {
     {
