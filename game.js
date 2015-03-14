@@ -1218,17 +1218,17 @@ function input(event) {
     // document.body.appendChild(img);
     window.open(display.getContainer().toDataURL("image/png"), "_blank");
   }
-  if(event.keyCode == ROT.VK_K) {
+  if(event.keyCode == ROT.VK_X) {
     init_game();
     window.removeEventListener("keydown", input);
     tick();
     return;
   }
 
-  var up = (event.keyCode == ROT.VK_W);
-  var down = (event.keyCode == ROT.VK_S);
-  var left = (event.keyCode == ROT.VK_A);
-  var right = (event.keyCode == ROT.VK_D);
+  var up = (event.keyCode == ROT.VK_W || event.keyCode == ROT.VK_K || event.keyCode == ROT.VK_UP);
+  var down = (event.keyCode == ROT.VK_S || event.keyCode == ROT.VK_J || event.keyCode == ROT.VK_DOWN);
+  var left = (event.keyCode == ROT.VK_A || event.keyCode == ROT.VK_H || event.keyCode == ROT.VK_LEFT);
+  var right = (event.keyCode == ROT.VK_D || event.keyCode == ROT.VK_L || event.keyCode == ROT.VK_RIGHT);
   var wait = (event.keyCode == ROT.VK_SPACE);
 
   if(!(up || down || left || right || wait)) return;
