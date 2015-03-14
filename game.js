@@ -88,7 +88,7 @@ var colors = {
 
 var dogue_adjectives = ["SO", "SUCH", "MUCH", "MANY", "VRY"];
 var dogue_nouns = ["COPY", "FROG", "YENDOR", "DOGUE", "TURNS", "ASCII"];
-var dogue_singletons = ["WOW", "GOTY", "#7DRL", "@"];
+var dogue_singletons = ["WOW", "#7DRL", "@", "GOTY", "BOOM HEADSHOT"];
 var dogue_texts;
 var dogue_field;
 var dogue_color_field;
@@ -976,7 +976,7 @@ function draw() {
     var x = Math.floor((screen_shape[0] - msg.length) / 2);
     display.drawText(x, y++, "%c{#fff}" + msg);
 
-    var msg = "SPC:RESTART";
+    var msg = "SPACE:RETRY";
     var x = Math.floor((screen_shape[0] - msg.length) / 2);
     display.drawText(x, y++, "%c{#fff}" + msg);
   }
@@ -1335,7 +1335,12 @@ function input(event) {
     if(event.keyCode == ROT.VK_T) {
       var row = field[world_to_field(player_pos)[1]];
       row[player_pos[0]] = "X";
-      var text = row.join("") + "\n" + player_cause_of_death + " AT " + player_score.toString();
+      if(kestrel_pos[1] == player_pos[1]) {
+        if(kestrel_pos[0] >= 0 && kestrel_pos[0] < row.length) {
+          row[kestrel_pos[0]] = "K";
+        }
+      }
+      var text = row.join("") + "\n" + player_cause_of_death + " " + player_score.toString() + " hops in.";
       window.open(
         "https://twitter.com/intent/tweet?text=" + encodeURI(text)
           + "&hashtags=copyfrogue"
