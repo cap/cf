@@ -530,10 +530,10 @@ function init_game() {
   player_gifts = {
     blind: false,
     poison: false,
-    // dogue: false;
-    // confused: false;
+    // dogue: false,
+    confused: false,
     glove: false,
-    // crosswalk: false;
+    // crosswalk: false,
   };
   player_gifts_remaining = Object.keys(player_gifts);
   player_driving = false;
@@ -1199,6 +1199,10 @@ function tick() {
         player_gifts_remaining.splice(index, 1);
 
         switch(gift) {
+        case "confused": {
+          player_gifts.confused = true;
+          player_gift_text = "CONFUSED";
+        } break;
         case "blind": {
           player_gifts.blind = true;
           player_gift_text = "BLIND";
@@ -1288,6 +1292,11 @@ function input(event) {
   if(down) dp[1]--;
   if(left) dp[0]--;
   if(right) dp[0]++;
+
+  if(player_gifts.confused) {
+    dp[0] *= -1;
+    dp[1] *= -1;
+  }
 
   if(dp[0] != 0 || dp[1] != 0) {
     if(player_alive) {
