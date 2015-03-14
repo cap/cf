@@ -32,7 +32,7 @@ var player_alive;
 var player_start_pos;
 var player_pos;
 var player_score;
-var player_narration;
+var player_gift_text;
 var player_gifts;
 var player_gifts_remaining;
 var player_driving;
@@ -525,14 +525,14 @@ function init_game() {
   player_alive = true;
   player_pos = player_start_pos.slice();
   player_score = 0;
-  player_narration = "";
+  player_gift_text = "";
   player_cause_of_death = "";
   player_gifts = {
     blind: false,
     poison: false,
     // dogue: false;
     // confused: false;
-    // map: false,
+    glove: false,
     // crosswalk: false;
   };
   player_gifts_remaining = Object.keys(player_gifts);
@@ -809,7 +809,7 @@ function render_tile(pos) {
     }
   }
 
-  if(render_reachable || player_gifts.map) {
+  if(render_reachable) {
     if(!row_reachable[row_pos[1]][row_pos[0]]) {
       fg = ROT.Color.interpolate(fg, colors.black, .5);
       bg = ROT.Color.interpolate(bg, colors.black, .5);
@@ -915,11 +915,11 @@ function draw() {
       display.drawText(
         screen_pos[0], screen_pos[1], col + player_score.toString());
     }
-    var x = Math.floor((screen_shape[0] - player_narration.length) / 2);
+    var x = Math.floor((screen_shape[0] - player_gift_text.length) / 2);
     var bg = get_bg(screen_to_world([x, screen_shape[1] - 1]));
-    if(player_narration == "COPY FROGUE") bg = colors.black;
+    if(player_gift_text == "COPY FROGUE") bg = colors.black;
     var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
-    display.drawText(x, screen_shape[1] - 1, col + player_narration);
+    display.drawText(x, screen_shape[1] - 1, col + player_gift_text);
   }
 
   if(show_title) {
@@ -963,7 +963,7 @@ function end_tick() {
       for(var x = 0; x < field_shape[0]; ++x) {
         rows[row_pos[1]][x] = "_";
       }
-      player_narration = "COPY FROGUE";
+      player_gift_text = "COPY FROGUE";
       player_driving = true;
       if(game_time % 60 == 0) {
         player_pos[0]++;
@@ -1094,35 +1094,41 @@ function tick() {
   move_player();
   render();
 
-  if(kestrel_alive && !kestrel_tamed) {
-    if(kestrel_homing) {
-      kestrel_pos[1] = player_pos[1];
+  if(kestrel_alive) {
+    if(kestrel_tamed) {
+      if(game_time % kestrel_dt == 0) {
+        kestrel_pos[1] += 1;
+      }
     } else {
-      if(kestrel_pos[1] >= player_pos[1]) {
-        kestrel_homing = true;
-        kestrel_dt = 15;
-        if(player_pos[0] == kestrel_pos[0]) {
-          kestrel_v = 0;
-        } else {
-          kestrel_v = (player_pos[0] < kestrel_pos[0])? -1 : 1;
-        }
+      if(kestrel_homing) {
+        kestrel_pos[1] = player_pos[1];
       } else {
-        kestrel_t += tick_dt;
-        if(kestrel_t >= kestrel_dty) {
-          kestrel_pos[1]++;
-          kestrel_t = 0;
+        if(kestrel_pos[1] >= player_pos[1]) {
+          kestrel_homing = true;
+          kestrel_dt = 15;
+          if(player_pos[0] == kestrel_pos[0]) {
+            kestrel_v = 0;
+          } else {
+            kestrel_v = (player_pos[0] < kestrel_pos[0])? -1 : 1;
+          }
+        } else {
+          kestrel_t += tick_dt;
+          if(kestrel_t >= kestrel_dty) {
+            kestrel_pos[1]++;
+            kestrel_t = 0;
+          }
         }
       }
-    }
 
-    if(game_time % kestrel_dt == 0) {
-      kestrel_pos[0] += kestrel_v;
-      if((kestrel_pos[0] <= -kestrel_range && kestrel_v < 0) ||
-         (kestrel_pos[0] > screen_shape[0] + kestrel_range && kestrel_v > 0)) {
-        if(rng_uniform() < .8) kestrel_v *= -1;
-        if(player_pos[1] - kestrel_pos[1] > kestrel_dead_y) {
-          kestrel_pos[1] = player_pos[1] - kestrel_dead_y;
-          kestrel_t = 0;
+      if(game_time % kestrel_dt == 0) {
+        kestrel_pos[0] += kestrel_v;
+        if((kestrel_pos[0] <= -kestrel_range && kestrel_v < 0) ||
+           (kestrel_pos[0] > screen_shape[0] + kestrel_range && kestrel_v > 0)) {
+          if(rng_uniform() < .8) kestrel_v *= -1;
+          if(player_pos[1] - kestrel_pos[1] > kestrel_dead_y) {
+            kestrel_pos[1] = player_pos[1] - kestrel_dead_y;
+            kestrel_t = 0;
+          }
         }
       }
     }
@@ -1148,7 +1154,7 @@ function tick() {
       for(var x = gutter_width; x < field_shape[0] - gutter_width; ++x) {
         rows[row_pos[1] - 1][x] = ".";
       }
-      player_narration = "";
+      player_gift_text = "";
       // kestrel_tamed = true;
       if(kestrel_alive) {
         kestrel_pos = player_pos.slice();
@@ -1165,7 +1171,7 @@ function tick() {
       }
 
       if(row_types[row_pos[1]].type == "end") {
-        player_narration = "KEY";
+        player_gift_text = "KEY";
         end_active = true;
       } else {
         var probs = [];
@@ -1179,15 +1185,15 @@ function tick() {
         switch(gift) {
         case "blind": {
           player_gifts.blind = true;
-          player_narration = "BLIND";
+          player_gift_text = "BLIND";
         } break;
-        case "map": {
-          player_gifts.map = true;
-          player_narration = "MAGIC MAP";
+        case "glove": {
+          player_gifts.glove = true;
+          player_gift_text = "KESTREL GLOVE";
         } break;
         case "poison": {
           player_gifts.poison = true;
-          player_narration = "KESTRELPOISON";
+          player_gift_text = "KESTREL POISN";
         } break;
         }
       }
@@ -1195,9 +1201,15 @@ function tick() {
     if(kestrel_pos[0] == player_pos[0] && kestrel_pos[1] == player_pos[1]) {
       if(player_gifts.poison) {
         kestrel_alive = false;
-        player_narration = "";
-      } else {
-        kestrel_v = 0;
+        player_gift_text = "";
+        var idx = player_gifts_remaining.indexOf("glove");
+        if(idx != -1) player_gifts_remaining.splice(idx, 1);
+      } else if(player_gifts.glove) {
+        kestrel_tamed = true;
+        player_gift_text = "";
+        var idx = player_gifts_remaining.indexOf("poison");
+        if(idx != -1) player_gifts_remaining.splice(idx, 1);
+      } else if(kestrel_alive && !kestrel_tamed) {
         player_alive = false;
         player_cause_of_death = "KESTRELED";
       }
