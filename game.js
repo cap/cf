@@ -943,6 +943,24 @@ function draw() {
     display.drawText(mid[0] - 2, mid[1] - 1, "%c{#fff}COPY");
     display.drawText(mid[0] - 3, mid[1], "%c{#fff}FROGUE");
   }
+
+  if(!player_alive) {
+    var y = Math.floor(screen_shape[1] / 2) - 2;
+
+    var msg = player_narration;
+    var x = Math.floor((screen_shape[0] - msg.length) / 2);
+    display.drawText(x, y++, "%c{#fff}" + msg);
+
+    y++;
+
+    var msg = "T:TWEET";
+    var x = Math.floor((screen_shape[0] - msg.length) / 2);
+    display.drawText(x, y++, "%c{#fff}" + msg);
+
+    var msg = "SPC:RESTART";
+    var x = Math.floor((screen_shape[0] - msg.length) / 2);
+    display.drawText(x, y++, "%c{#fff}" + msg);
+  }
 }
 
 function end_tick() {
@@ -1224,6 +1242,23 @@ function input(event) {
     tick();
     return;
   }
+  if(!player_alive) {
+    if(event.keyCode == ROT.VK_T) {
+      var row = field[world_to_field(player_pos)[1]].join("");
+      var text = row + "\n" + player_score.toString() + "! New top score!";
+      window.open(
+        "https://twitter.com/intent/tweet?text=" + encodeURI(text)
+          + "&hashtags=copyfrogue"
+          + "&url=" + encodeURI("http://cpets.ch/cf/")
+      );
+    }
+    if(event.keyCode == ROT.VK_SPACE) {
+      init_game();
+      window.removeEventListener("keydown", input);
+      tick();
+    }
+    return;
+  }
 
   var up = (event.keyCode == ROT.VK_W || event.keyCode == ROT.VK_K || event.keyCode == ROT.VK_UP);
   var down = (event.keyCode == ROT.VK_S || event.keyCode == ROT.VK_J || event.keyCode == ROT.VK_DOWN);
@@ -1281,8 +1316,6 @@ function input(event) {
           }
         }
       }
-    } else {
-      init_game();
     }
   }
 
