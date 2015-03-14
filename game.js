@@ -45,6 +45,7 @@ var camera_t;
 var end_t;
 var end_active;
 var end_y = 52;
+var end_y = 82;
 
 var show_title;
 
@@ -296,6 +297,7 @@ function try_row() {
         row[x] = "_";
       }
     } else if(gift_y == 1) {
+      full_type.subtype = "gate";
       var field_center = Math.floor(field_shape[0] / 2);
       for(var x = 0; x < field_shape[0]; ++x) {
         if(x == field_center || x == field_center - 2 || x == field_center + 2) {
@@ -312,6 +314,7 @@ function try_row() {
         row[x] = "+";
       }
     } else if(gift_y == 2) {
+      full_type.subtype = "gate";
       var field_center = Math.floor(field_shape[0] / 2);
       for(var x = 0; x < field_shape[0]; ++x) {
         if(x == field_center || x == field_center - 2 || x == field_center + 2) {
@@ -736,6 +739,10 @@ function render_tile(pos) {
   case "+": {
     var begin = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.road : colors.road_stripe;
     var end = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.black : colors.white;
+    if(row_types[row_pos[1]].subtype == "gate") {
+      begin = colors.road;
+      end = colors.black;
+    }
     bg = ROT.Color.interpolate(begin, end, .5);
   } break;
   case "!": {
