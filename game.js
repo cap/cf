@@ -11,6 +11,7 @@ var row_types;
 var row_dts;
 var row_move_player;
 var row_reachable;
+var row_triggered;
 var rows_shape;
 var key_handler;
 
@@ -82,6 +83,7 @@ var colors = {
   ],
   road: [82, 88, 101],
   road_stripe: [125, 135, 154],
+  warning: [254, 59, 69],
   lily_pad_dark: [17, 181, 94],
   lily_pad_light: [30, 209, 118],
 };
@@ -195,6 +197,7 @@ function try_row() {
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
 
+  var triggered = -1;
   var dt = 0;
   var move_player = false;
   var full_type = {
@@ -292,17 +295,8 @@ function try_row() {
     if(rng_uniform() < .5) {
       dt *= -1;
     }
-    var len = 20;
-    var start = Math.floor(5 + rng_uniform() * 60);
-    if(dt < 0) {
-      start = Math.max(0, rows_shape[0] - start - len);
-    }
     for(var x = 0; x < rows_shape[0]; ++x) {
-      if(x >= start && x < start + len) {
-        row[x] = "T";
-      } else {
-        row[x] = "=";
-      }
+      row[x] = "=";
     }
   } else if(gen_type == "gift") {
     var gift_y = gen_y - (gen_end - 4);
@@ -369,6 +363,7 @@ function try_row() {
     }
   }
 
+  row_triggered[row_y] = triggered;
   row_dts[row_y] = dt;
   row_types[row_y] = full_type;
   row_move_player[row_y] = move_player;
@@ -492,6 +487,7 @@ function gen_row() {
     ps[states.indexOf("grass")] += Math.max(0, 1 - progress / 100);
     ps[states.indexOf(gen_type)] = 0;
     gen_type = rng_choose(states, ps);
+    gen_type = "railroad";
 
     var len = 0;
     if(gen_type == "grass") {
@@ -570,9 +566,9 @@ function init() {
   var font_size = 50;
 
   // tuning settings
-  // screen_shape = [13, 200];
-  // field_shape = [13, 200];
-  // rows_shape = [50, 500];
+  // screen_shape = [50, 13];
+  // field_shape = [50, 13];
+  // rows_shape = [100, 500];
   // font_size = 5;
 
   // screenshot settings
@@ -604,6 +600,7 @@ function init() {
   rows = new Array(rows_shape[1]);
   row_reachable = new Array(rows_shape[1]);
   row_dts = new Array(rows_shape[1]);
+  row_triggered = new Array(rows_shape[1]);
   row_types = new Array(rows_shape[1]);
   row_move_player = new Array(rows_shape[1]);
   for(var i = 0; i < rows_shape[1]; ++i) {
@@ -611,6 +608,7 @@ function init() {
     row_reachable[i] = new Array(field_shape[0]);
     row_types[i] = "";
     row_dts[i] = 0;
+    row_triggered[i] = -1;
     row_move_player[i] = false;
   }
 
@@ -771,6 +769,12 @@ function render_tile(pos) {
   case "=": {
     bg = colors.road;
     fg = colors.road_stripe;
+    if(pos[0] == 3 || pos[0] == 4) {
+      var trigger = row_triggered[row_pos[1]];
+      if(trigger != -1 && game_time > trigger && game_time < trigger + 360) {
+        fg = colors.warning;
+      }
+    }
   } break;
   case "T": {
     bg = colors.road;
@@ -1082,18 +1086,20 @@ function render_dogue() {
   }
 }
 
+function get_row_offset(world_y) {
+  var row_y = world_to_rows([0, world_y])[1];
+  var dt = Math.abs(row_dts[row_y]);
+  var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
+  var cycles = (dt == 0)? 0 : Math.floor(game_time / dt);
+  var x0 = (dx <= 0)? 0 : rows_shape[0] - 1 - field_shape[0];
+  x0 += dx * cycles;
+  while(x0 < 0) x0 += rows_shape[0];
+  return x0;
+}
 
 function render() {
   for(var y = 0; y < field_shape[1]; ++y) {
-    var world_y = field_to_world([0, y])[1];
-    var row_y = world_to_rows([0, world_y])[1];
-    var dt = Math.abs(row_dts[row_y]);
-    var dx = (dt == 0)? 0 : row_dts[row_y] / dt;
-    var cycles = (dt == 0)? 0 : Math.floor(game_time / dt);
-    var x0 = (dx <= 0)? 0 : rows_shape[0] - 1 - field_shape[0];
-    x0 += dx * cycles;
-    while(x0 < 0) x0 += rows_shape[0];
-
+    var x0 = get_row_offset(field_to_world([0, y])[1]);
     for(var x = 0; x < field_shape[0]; ++x) {
       var row_pos = field_to_rows([x + x0, y]);
       field[y][x] = rows[row_pos[1]][row_pos[0]];
@@ -1192,6 +1198,28 @@ function tick() {
             kestrel_t = 0;
           }
         }
+      }
+    }
+  }
+
+  for(var y = 0; y < field_shape[1]; ++y) {
+    var row_pos = field_to_rows([0, y]);
+    var world_pos = field_to_world([0, y]);
+
+    if(row_types[row_pos[1]].type == "railroad" && row_triggered[row_pos[1]] == -1) {
+      var trigger = 5 + Math.floor(y / 3 + rng_uniform() * 10);
+      row_triggered[row_pos[1]] = game_time + (trigger - 4) * 60;
+      var len = 18;
+      var start = trigger * 6; // Math.floor(5 + rng_uniform() * 60);
+      if(row_dts[row_pos[1]] < 0) {
+        start = rows_shape[0] - start - len;
+      } else {
+        start += field_shape[0];
+      }
+      start += get_row_offset(world_pos[1]);
+      while(start < 0) start += rows_shape[0];
+      for(var x = start; x < start + len; ++x) {
+        rows[row_pos[1]][x % rows_shape[0]] = "T";
       }
     }
   }
