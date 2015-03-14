@@ -670,6 +670,14 @@ function field_to_rows(pos) {
   return world_to_rows(field_to_world(pos));
 }
 
+function get_gate_colors(pos) {
+  var alpha = Math.floor(pos[1] / gift_dy) / 4;
+  return {
+    dark: ROT.Color.interpolate(colors.road, colors.black, alpha),
+    light: ROT.Color.interpolate(colors.road_stripe, colors.white, alpha),
+  };
+}
+
 function render_tile(pos) {
   var row_pos = world_to_rows(pos);
   var field_pos = world_to_field(pos);
@@ -745,26 +753,14 @@ function render_tile(pos) {
     fg = colors.water;
   } break;
   case "+": {
-    var begin = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.road : colors.road_stripe;
-    var end = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.black : colors.white;
-    if(row_types[row_pos[1]].subtype == "gate") {
-      begin = colors.road;
-      end = colors.black;
-    }
-    var alpha = Math.floor(pos[1] / gift_dy) / 4;
-    bg = ROT.Color.interpolate(begin, end, alpha);
+    var gc = get_gate_colors(pos);
+    bg = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? gc.dark : gc.light;
+    if(row_types[row_pos[1]].subtype == "gate") bg = gc.dark;
   } break;
   case "!": {
-    {
-      var begin = colors.road_stripe;
-      var end = colors.white;
-      fg = ROT.Color.interpolate(begin, end, .5);
-    }
-    {
-      var begin = colors.road;
-      var end = colors.black;
-      bg = ROT.Color.interpolate(begin, end, .5);
-    }
+    var gc = get_gate_colors(pos);
+    bg = gc.dark;
+    fg = gc.light;
     if(pos[0] < 4) {
       display_tile = "GIFT"[pos[0]];
     } else if(pos[0] >= field_shape[0] - 4) {
@@ -773,11 +769,8 @@ function render_tile(pos) {
 
   } break;
   case "?": {
-    {
-      var begin = colors.road;
-      var end = colors.black;
-      bg = ROT.Color.interpolate(begin, end, .5);
-    }
+    var gc = get_gate_colors(pos);
+    bg = gc.dark;
     fg = rng_choose(colors.cars, [1, 1, 1, 1, 1, 1]);
   }
   }
@@ -823,9 +816,6 @@ function render_tile(pos) {
       bg = ROT.Color.interpolate(bg, colors.black, .5);
     }
   }
-
-  // fg = ROT.Color.interpolate(fg, colors.black, .75);
-  // bg = ROT.Color.interpolate(bg, colors.black, .75);
 
   return {
     tile: display_tile,
@@ -879,13 +869,6 @@ function draw() {
         ROT.Color.toRGB(tile.bg));
     }
   }
-
-  // for(var i = 0; i < rows.length; ++i) {
-  //   var fg = "#fff";
-  //   var bg = "#000";
-  //   var pos = world_to_screen(rows[i].p);
-  //   display.draw(pos[0], pos[1], "X", fg, bg);
-  // }
 
   // kestrel
   var fg = [141, 83,  80];
