@@ -1157,7 +1157,7 @@ function tick() {
 
   if(kestrel_alive) {
     if(kestrel_tamed) {
-      if(game_time % kestrel_dt == 0) {
+      if(game_time % (kestrel_dt * 2) == 0) {
         kestrel_pos[1] += 1;
       }
     } else {
@@ -1271,12 +1271,12 @@ function tick() {
     if(kestrel_pos[0] == player_pos[0] && kestrel_pos[1] == player_pos[1]) {
       if(player_gifts.poison) {
         kestrel_alive = false;
-        player_gift_text = "";
+        player_gift_text = "KILLD KESTREL";
         var idx = player_gifts_remaining.indexOf("glove");
         if(idx != -1) player_gifts_remaining.splice(idx, 1);
       } else if(player_gifts.glove) {
         kestrel_tamed = true;
-        player_gift_text = "";
+        player_gift_text = "TAMED KESTREL";
         var idx = player_gifts_remaining.indexOf("poison");
         if(idx != -1) player_gifts_remaining.splice(idx, 1);
       } else if(kestrel_alive && !kestrel_tamed) {
