@@ -331,8 +331,13 @@ function try_row() {
     } else {
       for(var x = 0; x < rows_shape[0]; ++x) {
         row[x] = ".";
-        if(x > field_shape[0] || gift_y > 9) {
-          if(rng_uniform() < .4) row[x] = "*";
+        if(in_gutter(x)) row[x] = "*";
+        if(x > field_shape[0]) {
+          row[x] = rng_choose([".", "*"], [1, 1]);
+        }
+        if(gift_y > 9) {
+          row[x] = "~";
+          full_type.subtype = "ocean";
         }
       }
       if(gift_y == 8) {
@@ -655,7 +660,8 @@ function field_to_rows(pos) {
 }
 
 function render_tile(pos) {
-  var row_pos = world_to_rows([pos[0], pos[1]]);
+  var row_pos = world_to_rows(pos);
+  var field_pos = world_to_field(pos);
   var tile = get_tile(pos);
   var display_tile = tile;
   var fg = "#fff";
@@ -728,11 +734,21 @@ function render_tile(pos) {
     fg = colors.water;
   } break;
   case "+": {
-    bg = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.road : colors.road_stripe;
+    var begin = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.road : colors.road_stripe;
+    var end = ((Math.floor(pos[0] / 2) + pos[1]) % 2 == 0)? colors.black : colors.white;
+    bg = ROT.Color.interpolate(begin, end, .5);
   } break;
   case "!": {
-    fg = colors.road_stripe;
-    bg = colors.road;
+    {
+      var begin = colors.road_stripe;
+      var end = colors.white;
+      fg = ROT.Color.interpolate(begin, end, .5);
+    }
+    {
+      var begin = colors.road;
+      var end = colors.black;
+      bg = ROT.Color.interpolate(begin, end, .5);
+    }
     if(pos[0] < 4) {
       display_tile = "GIFT"[pos[0]];
     } else if(pos[0] >= field_shape[0] - 4) {
@@ -741,18 +757,24 @@ function render_tile(pos) {
 
   } break;
   case "?": {
-    bg = colors.road;
+    {
+      var begin = colors.road;
+      var end = colors.black;
+      bg = ROT.Color.interpolate(begin, end, .5);
+    }
     fg = rng_choose(colors.cars, [1, 1, 1, 1, 1, 1]);
   }
   }
-  if(in_gutter(pos[0])) {
+
+  if(in_gutter(field_pos[0]) || row_types[row_pos[1]].subtype == "ocean") {
     if(tile == "-" || tile == "~") {
       var w = Math.floor(rng_uniform() * 64);
       bg = ROT.Color.add(bg, [w, w, w]);
       var dt = row_dts[row_pos[1]];
-      if(tile == "~") display_tile = (dt < 0)? ")" : "(";
+      if(tile == "~" && dt != 0) display_tile = (dt < 0)? ")" : "(";
     } else {
       bg = ROT.Color.interpolate(bg, colors.black, .05);
+      fg = ROT.Color.interpolate(fg, colors.black, .05);
     }
   }
   if(tile == "]" || tile == "[") {
@@ -897,6 +919,7 @@ function draw() {
     }
     var x = Math.floor((screen_shape[0] - player_narration.length) / 2);
     var bg = get_bg(screen_to_world([x, screen_shape[1] - 1]));
+    if(player_narration == "COPY FROGUE") bg = colors.black;
     var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
     display.drawText(x, screen_shape[1] - 1, col + player_narration);
   }
@@ -912,21 +935,37 @@ function end_tick() {
   for(var i = 0; i < 10; ++i) {
     game_time += tick_dt;
     end_t += .005;
-    if(end_t > .5 && kestrel_tamed && kestrel_pos[0] < player_pos[0] - 1) {
-      if(game_time % kestrel_dt == 0) kestrel_pos[0]++;
+    if(end_t > .5) {
+      if(kestrel_tamed) {
+        if(kestrel_pos[0] < player_pos[0] - 1) {
+          if(game_time % kestrel_dt == 0) kestrel_pos[0]++;
+        }
+      }
     }
     if(end_t > 1) {
       var row_pos = world_to_rows(player_pos);
       for(var x = 0; x < field_shape[0]; ++x) {
         rows[row_pos[1]][x] = "_";
       }
-      player_narration = "FIN";
+      player_narration = "COPY FROGUE";
       player_driving = true;
       if(game_time % 60 == 0) {
         player_pos[0]++;
         camera_pos[0]++;
         if(kestrel_tamed) {
           kestrel_pos[0] = player_pos[0] - 1;
+        } else {
+          if(kestrel_alive) {
+            kestrel_pos[0]++;
+            if(kestrel_pos[0] < player_pos[0] - 5) {
+              kestrel_pos[0]++;
+            }
+            if(game_time % 480 == 0) {
+              kestrel_pos[1] += rng_choose([-1, 1], [1, 1]);
+              kestrel_pos[1] = Math.min(kestrel_pos[1], player_pos[1] + 3);
+              kestrel_pos[1] = Math.max(kestrel_pos[1], player_pos[1] - 3);
+            }
+          }
         }
       }
     }
@@ -1090,12 +1129,12 @@ function tick() {
     }
     if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
-      for(var x = 0; x < field_shape[0]; ++x) {
+      for(var x = gutter_width; x < field_shape[0] - gutter_width; ++x) {
         rows[row_pos[1] - 1][x] = ".";
       }
       player_narration = "";
-      kestrel_tamed = true;
-      if(kestrel_tamed) {
+      // kestrel_tamed = true;
+      if(kestrel_alive) {
         kestrel_pos = player_pos.slice();
         kestrel_pos[0] -= 10;
       }
@@ -1105,12 +1144,12 @@ function tick() {
     if(tile == "?") {
       for(var x = 0; x < field_shape[0]; ++x) {
         if(rows[row_pos[1]][x] == "?") {
-          rows[row_pos[1]][x] = "_";
+          rows[row_pos[1]][x] = "+";
         }
       }
 
       if(row_types[row_pos[1]].type == "end") {
-        player_narration = "KEYS";
+        player_narration = "KEY";
         end_active = true;
       } else {
         var probs = [];
