@@ -45,9 +45,8 @@ var camera_t;
 
 var end_t;
 var end_active;
-var end_y = 52;
-var end_y = 82;
-var gift_dy = 20;
+var end_y = 44; // car at +6
+var gift_dy = 11;
 
 var show_title;
 
@@ -55,7 +54,7 @@ var gen_y;
 var gen_type;
 var gen_end;
 var gen_first_end;
-var gen_base_progress = 50;
+var gen_base_progress = 0;
 
 var render_reachable = false;
 var render_visible = false;
@@ -438,7 +437,7 @@ function gen_row() {
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
 
-  if(gen_type != "end" && progress % gift_dy == 0) {
+  if(gen_type != "end" && progress > 0 && progress % gift_dy == 0) {
     gen_type = "gift";
     gen_end = gen_y + 4;
   }
@@ -671,7 +670,7 @@ function field_to_rows(pos) {
 }
 
 function get_gate_colors(pos) {
-  var alpha = Math.floor(pos[1] / gift_dy) / 4;
+  var alpha = (Math.floor(pos[1] / gift_dy) - 1) / 4;
   return {
     dark: ROT.Color.interpolate(colors.road, colors.black, alpha),
     light: ROT.Color.interpolate(colors.road_stripe, colors.white, alpha),
