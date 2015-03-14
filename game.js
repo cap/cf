@@ -669,7 +669,16 @@ function field_to_rows(pos) {
   return world_to_rows(field_to_world(pos));
 }
 
+function get_gate_progress(pos) {
+  var progress = pos[1] + gen_base_progress;
+  var idx = Math.floor(pos[1] / gift_dy);
+  var pct = (progress - idx * gift_dy) / gift_dy;
+  window.console.log(pct);
+  return pct;
+}
+
 function get_gate_colors(pos) {
+  var progress = pos[1] + gen_base_progress;
   var alpha = (Math.floor(pos[1] / gift_dy) - 1) / 4;
   return {
     dark: ROT.Color.interpolate(colors.road, colors.black, alpha),
@@ -889,7 +898,7 @@ function draw() {
     var tile = "@";
     if(!player_alive) {
       fg = "#000";
-      tile = "@";
+      tile = "X";
     }
     var bg = ROT.Color.toRGB(get_bg(player_pos));
     var pos = world_to_screen(player_pos);
@@ -1091,8 +1100,15 @@ function tick() {
     gen_row();
   }
 
+  if(get_gate_progress(player_pos) > .75) {
+    var keys = Object.keys(player_gifts);
+    for(var i = 0; i < keys.length; ++i) {
+      player_gifts[keys[i]] = false;
+    }
+    player_gift_text = "";
+  }
+
   move_player();
-  render();
 
   if(kestrel_alive) {
     if(kestrel_tamed) {
@@ -1222,6 +1238,7 @@ function tick() {
     setTimeout(tick, 2);
   }
 
+  render();
   draw();
 }
 
