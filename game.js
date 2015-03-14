@@ -36,6 +36,7 @@ var player_narration;
 var player_gifts;
 var player_gifts_remaining;
 var player_driving;
+var player_cause_of_death;
 
 var camera_begin;
 var camera_end;
@@ -526,6 +527,7 @@ function init_game() {
   player_pos = player_start_pos.slice();
   player_score = 0;
   player_narration = "";
+  player_cause_of_death = "";
   player_gifts = {
     blind: false,
     poison: false,
@@ -947,7 +949,7 @@ function draw() {
   if(!player_alive) {
     var y = Math.floor(screen_shape[1] / 2) - 2;
 
-    var msg = player_narration;
+    var msg = player_cause_of_death;
     var x = Math.floor((screen_shape[0] - msg.length) / 2);
     display.drawText(x, y++, "%c{#fff}" + msg);
 
@@ -1148,16 +1150,16 @@ function tick() {
     var row_pos = world_to_rows(player_pos);
     if(in_gutter(player_pos[0])) {
       player_alive = false;
-      player_narration = "RAPIDS";
+      player_cause_of_death = "SWEPT AWAY";
     }
     var tile = get_tile(player_pos);
     if(tile == "[" || tile == "]" || tile == "(" || tile == ")") {
       player_alive = false;
-      player_narration = "CAR";
+      player_cause_of_death = "RUN OVER";
     }
     if(tile == "T") {
       player_alive = false;
-      player_narration = "TRAIN";
+      player_cause_of_death = "RAILROADED";
     }
     if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
@@ -1215,7 +1217,7 @@ function tick() {
       } else {
         kestrel_v = 0;
         player_alive = false;
-        player_narration = "KESTREL";
+        player_cause_of_death = "KESTRELED";
       }
     }
   }
@@ -1244,8 +1246,9 @@ function input(event) {
   }
   if(!player_alive) {
     if(event.keyCode == ROT.VK_T) {
-      var row = field[world_to_field(player_pos)[1]].join("");
-      var text = row + "\n" + player_score.toString() + "! New top score!";
+      var row = field[world_to_field(player_pos)[1]];
+      row[player_pos[0]] = "X";
+      var text = row.join("") + "\n" + player_cause_of_death + " AT " + player_score.toString();
       window.open(
         "https://twitter.com/intent/tweet?text=" + encodeURI(text)
           + "&hashtags=copyfrogue"
@@ -1304,15 +1307,15 @@ function input(event) {
           player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
           if(new_tile == "~") {
             player_alive = false;
-            player_narration = "WATER";
+            player_cause_of_death = "DROWNED";
           }
           if(new_tile == "[" || new_tile == "]" || new_tile == "(" || new_tile == ")") {
             player_alive = false;
-            player_narration = "CAR";
+            player_cause_of_death = "RUN OVER";
           }
           if(new_tile == "T") {
             player_alive = false;
-            player_narration = "TRAIN";
+            player_cause_of_death = "RAILROADED";
           }
         }
       }
