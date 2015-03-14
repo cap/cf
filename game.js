@@ -487,7 +487,6 @@ function gen_row() {
     ps[states.indexOf("grass")] += Math.max(0, 1 - progress / 100);
     ps[states.indexOf(gen_type)] = 0;
     gen_type = rng_choose(states, ps);
-    gen_type = "railroad";
 
     var len = 0;
     if(gen_type == "grass") {
@@ -789,12 +788,13 @@ function render_tile(pos) {
     var gc = get_gate_colors(pos);
     bg = gc.dark;
     fg = gc.light;
-    if(pos[0] < 4) {
-      display_tile = "GIFT"[pos[0]];
-    } else if(pos[0] >= field_shape[0] - 4) {
-      display_tile = "GATE"[pos[0] - (field_shape[0] - 4)];
+    if(row_types[row_pos[1]].subtype == "gate") {
+      if(pos[0] < 4) {
+        display_tile = "GIFT"[pos[0]];
+      } else if(pos[0] >= field_shape[0] - 4) {
+        display_tile = "GATE"[pos[0] - (field_shape[0] - 4)];
+      }
     }
-
   } break;
   case "?": {
     var gc = get_gate_colors(pos);
@@ -1151,7 +1151,7 @@ function tick() {
     gen_row();
   }
 
-  if(get_gate_progress(player_pos) > .75) {
+  if(get_gate_progress(player_pos) > .5) {
     var keys = Object.keys(player_gifts);
     for(var i = 0; i < keys.length; ++i) {
       player_gifts[keys[i]] = false;
@@ -1258,6 +1258,7 @@ function tick() {
         if(rows[row_pos[1]][x] == "?") {
           rows[row_pos[1]][x] = "+";
         }
+        rows[(row_pos[1] - 1 + rows_shape[1]) % rows_shape[1]][x] = "!";
       }
 
       if(row_types[row_pos[1]].type == "end") {
