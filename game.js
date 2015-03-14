@@ -86,6 +86,13 @@ var colors = {
   lily_pad_light: [30, 209, 118],
 };
 
+var dogue_adjectives = ["SO", "SUCH", "MUCH", "MANY", "VRY"];
+var dogue_nouns = ["COPY", "FROG", "YENDOR", "DOGUE", "TURNS", "ASCII"];
+var dogue_singletons = ["WOW", "GOTY", "#7DRL", "@"];
+var dogue_texts;
+var dogue_field;
+var dogue_color_field;
+
 function rng_uniform() {
     return ROT.RNG.getUniform();
 }
@@ -116,6 +123,12 @@ function rng_discrete(ps) {
 
 function rng_choose(values, ps) {
   return values[rng_discrete(ps)];
+}
+
+function rng_choose_evenly(values) {
+  var ps = [];
+  for(var i = 0; i < values.length; ++i) ps.push(1);
+  return rng_choose(values, ps);
 }
 
 function find_runs(row) {
@@ -530,7 +543,7 @@ function init_game() {
   player_gifts = {
     blind: false,
     poison: false,
-    // dogue: false,
+    dogue: false,
     confused: false,
     glove: false,
     // crosswalk: false,
@@ -538,12 +551,12 @@ function init_game() {
   player_gifts_remaining = Object.keys(player_gifts);
   player_driving = false;
 
+  dogue_texts = [];
+
   show_title = true;
 }
 
 function init() {
-  window.console.log("bar");
-
   // document.getElementById("tweeter").click();
 
   // camera shows ~11 whole rows
@@ -578,9 +591,13 @@ function init() {
   document.getElementById("display").appendChild(display.getContainer());
 
   field = new Array(field_shape[1]);
+  dogue_field = new Array(field_shape[1]);
+  dogue_color_field = new Array(field_shape[1]);
   visibility = new Array(field_shape[1]);
   for(var i = 0; i < field_shape[1]; ++i) {
     field[i] = new Array(field_shape[0]);
+    dogue_field[i] = new Array(field_shape[0]);
+    dogue_color_field[i] = new Array(field_shape[0]);
     visibility[i] = new Array(field_shape[0]);
   }
 
@@ -673,7 +690,6 @@ function get_gate_progress(pos) {
   var progress = pos[1] + gen_base_progress;
   var idx = Math.floor(pos[1] / gift_dy);
   var pct = (progress - idx * gift_dy) / gift_dy;
-  window.console.log(pct);
   return pct;
 }
 
@@ -806,6 +822,16 @@ function render_tile(pos) {
       var c0 = ROT.Color.interpolate(bg, fg, .5);
       var c1 = ROT.Color.interpolate(fg, [c, c, c], .5);
       fg = ROT.Color.interpolate(c0, c1, readiness);
+    }
+  }
+
+  if(player_gifts.dogue) {
+    if(valid_p(field_pos, field_shape)) {
+      var text = dogue_field[field_pos[1]][field_pos[0]];
+      if(text) {
+        display_tile = text;
+        fg = dogue_color_field[field_pos[1]][field_pos[0]];
+      }
     }
   }
 
@@ -1038,6 +1064,25 @@ function camera_tick() {
   }
 }
 
+
+function render_dogue() {
+  for(var y = 0; y < field_shape[1]; ++y) {
+    for(var x = 0; x < field_shape[0]; ++x) {
+      dogue_field[y][x] = null;
+    }
+  }
+  for(var i = 0; i < dogue_texts.length; ++i) {
+    var text = dogue_texts[i];
+    var y = text.pos[1];
+    for(var j = 0; j < text.text.length; ++j) {
+      var x = text.pos[0] + j;
+      dogue_field[y][x] = text.text[j];
+      dogue_color_field[y][x] = text.color;
+    }
+  }
+}
+
+
 function render() {
   for(var y = 0; y < field_shape[1]; ++y) {
     var world_y = field_to_world([0, y])[1];
@@ -1203,6 +1248,11 @@ function tick() {
           player_gifts.confused = true;
           player_gift_text = "CONFUSED";
         } break;
+        case "dogue": {
+          player_gifts.dogue = true;
+          player_gift_text = "DOGUE";
+          render_dogue();
+        } break;
         case "blind": {
           player_gifts.blind = true;
           player_gift_text = "BLIND";
@@ -1242,6 +1292,27 @@ function tick() {
     setTimeout(tick, 2);
   }
 
+  if(player_gifts.dogue) {
+    if(game_time % 60 == 0) {
+      if(dogue_texts.length > 5) {
+        dogue_texts.splice(Math.floor(rng_uniform() * dogue_texts.length));
+      }
+      var text = {};
+      if(rng_uniform() < .3) {
+        text.text = rng_choose_evenly(dogue_singletons);
+      } else {
+        text.text = rng_choose_evenly(dogue_adjectives)
+          + " " + rng_choose_evenly(dogue_nouns);
+      }
+      text.color = ROT.Color.hsl2rgb([rng_uniform(), 1, .5]);
+      text.pos = [
+        Math.floor(rng_uniform() * (field_shape[0] - text.text.length)),
+        Math.floor(rng_uniform() * field_shape[1]),
+      ];
+      dogue_texts.push(text);
+      render_dogue();
+    }
+  }
   render();
   draw();
 }
