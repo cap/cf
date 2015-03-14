@@ -1154,6 +1154,7 @@ function tick() {
   }
 
   move_player();
+  render(); // here because tests below need the rendered field
 
   if(kestrel_alive) {
     if(kestrel_tamed) {
@@ -1313,7 +1314,7 @@ function tick() {
       render_dogue();
     }
   }
-  render();
+
   draw();
 }
 
