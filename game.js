@@ -545,7 +545,6 @@ function init_game() {
     dogue: false,
     confused: false,
     glove: false,
-    // crosswalk: false,
   };
   player_gifts_remaining = Object.keys(player_gifts);
   player_driving = false;
@@ -1395,12 +1394,12 @@ function input(event) {
   if(event.keyCode == ROT.VK_P) {
     window.open(display.getContainer().toDataURL("image/png"), "_blank");
   }
-  if(event.keyCode == ROT.VK_X) {
-    init_game();
-    window.removeEventListener("keydown", input);
-    tick();
-    return;
-  }
+  // if(event.keyCode == ROT.VK_X) {
+  //   init_game();
+  //   window.removeEventListener("keydown", input);
+  //   tick();
+  //   return;
+  // }
   if(!player_alive || (end_active && show_title)) {
     if(event.keyCode == ROT.VK_T) {
       var text;
