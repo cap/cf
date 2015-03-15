@@ -72,6 +72,7 @@ var colors = {
   light_grass: [189, 244, 102],
   dark_grass: [182, 236, 94],
   wood: [141, 83, 80],
+  kestrel: [101, 53, 50],
   tree: [182, 214, 33],
   tree_front: [130, 153, 31],
   tree_side: [59, 70, 18],
@@ -914,7 +915,7 @@ function draw() {
   }
 
   // kestrel
-  var fg = [141, 83,  80];
+  var fg = colors.kestrel;
   if(!kestrel_alive) fg = colors.black;
   if(render_visible || player_gifts.blind) {
     var fp = world_to_field(kestrel_pos);
