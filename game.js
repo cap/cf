@@ -304,6 +304,7 @@ var end_retry;
 var gift_dy = 30;
 
 var show_title;
+var suppress_special;
 
 var gen_y;
 var gen_type;
@@ -701,14 +702,16 @@ function gen_row() {
   var row_y_2 = (gen_y - 2 + rows_shape[1]) % rows_shape[1];
   var row = rows[row_y];
 
-  if(gen_type != "end" && progress > 0 && progress % gift_dy == 0) {
-    gen_type = "gift";
-    gen_end = gen_y + 4;
-  }
+  if(!suppress_special) {
+    if(gen_type != "end" && progress > 0 && progress % gift_dy == 0) {
+      gen_type = "gift";
+      gen_end = gen_y + 4;
+    }
 
-  if(progress == end_y) {
-    gen_type = "end";
-    gen_end = gen_y + 16;
+    if(progress == end_y) {
+      gen_type = "end";
+      gen_end = gen_y + 16;
+    }
   }
 
   var valid = false;
@@ -815,16 +818,23 @@ function init() {
   field_shape = [13, 13];
   rows_shape = [1000, 100];
   gutter_width = 2;
-  player_start_pos = [Math.floor(field_shape[0] / 2), 3];
   gen_first_end = 5;
+  suppress_special = false;
 
   var font_size = 50;
 
   // tuning settings
-  // screen_shape = [50, 13];
-  // field_shape = [50, 13];
-  // rows_shape = [100, 500];
-  // font_size = 5;
+  // screen_shape = [116, 25];
+  // field_shape = [116, 25];
+  // rows_shape = [116, 75];
+  // font_size = 20;
+
+  // twitter banner settings
+  // screen_shape = [116, 25];
+  // field_shape = [116, 25];
+  // rows_shape = [116, 75];
+  // font_size = 20;
+  // suppress_special = true;
 
   // screenshot settings
   // screen_shape = [15, 6];
@@ -833,6 +843,8 @@ function init() {
   // gutter_width = 3;
   // player_start_pos = [Math.floor(field_shape[0] / 2), 1];
   // gen_first_end = 2;
+
+  player_start_pos = [Math.floor(field_shape[0] / 2), 3];
 
   display = new ROT.Display({
     width: screen_shape[0],
@@ -1223,7 +1235,7 @@ function draw() {
     display.drawText(x, screen_shape[1] - 1, "%c{#fff}" + player_gift_text);
   }
 
-  if(show_title) {
+  if(show_title && !suppress_special) {
     var mid = [Math.floor(screen_shape[0] / 2), Math.floor(screen_shape[1] / 2) - 1];
     display.drawText(mid[0] - 2, mid[1] - 1, "%c{#fff}COPY");
     display.drawText(mid[0] - 3, mid[1], "%c{#fff}FROGUE");
