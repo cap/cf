@@ -1,0 +1,6 @@
+DST=s3://cpets.ch/cf/press/
+aws s3 cp index.html ${DST}
+aws s3 cp ss0.png ${DST}
+aws s3 cp ss1.png ${DST}
+aws s3 cp ss2.png ${DST}
+aws s3 cp ss3.png ${DST}
