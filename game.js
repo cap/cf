@@ -58,6 +58,7 @@ var gen_end;
 var gen_first_end;
 var gen_base_progress = 0;
 
+var send_ga_events = true;
 var render_reachable = false;
 var render_visible = false;
 var render_skew = 0;
@@ -1135,6 +1136,13 @@ function move_player() {
   }
 }
 
+function kill_player(cause) {
+  player_alive = false;
+  player_cause_of_death = cause;
+  player_gift_text = "";
+  if(send_ga_events) ga("send", "event", "cf", "die", cause, player_score);
+}
+
 function tick() {
   if(end_active) {
     var ey = end_y - gen_base_progress;
@@ -1242,20 +1250,14 @@ function tick() {
   if(player_alive) {
     var row_pos = world_to_rows(player_pos);
     if(in_gutter(player_pos[0])) {
-      player_alive = false;
-      player_cause_of_death = "SWEPT AWAY";
-      player_gift_text = "";
+      kill_player("SWEPT AWAY");
     }
     var tile = get_tile(player_pos);
     if(tile == "[" || tile == "]" || tile == "(" || tile == ")") {
-      player_alive = false;
-      player_cause_of_death = "RUN OVER";
-      player_gift_text = "";
+      kill_player("RUN OVER");
     }
     if(tile == "T") {
-      player_alive = false;
-      player_cause_of_death = "RAILROADED";
-      player_gift_text = "";
+      kill_player("RAILROADED");
     }
     if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
@@ -1271,6 +1273,7 @@ function tick() {
         kestrel_pos[0] -= 10;
       }
       end_t = 0;
+      if(send_ga_events) ga("send", "event", "cf", "win", get_win_verb());
       return end_tick();
     }
     if(tile == "?") {
@@ -1330,9 +1333,7 @@ function tick() {
         var idx = player_gifts_remaining.indexOf("poison");
         if(idx != -1) player_gifts_remaining.splice(idx, 1);
       } else if(kestrel_alive && !kestrel_tamed) {
-        player_alive = false;
-        player_cause_of_death = "KESTRELED";
-        player_gift_text = "";
+        kill_player("KESTRELED");
       }
     }
   }
@@ -1368,6 +1369,16 @@ function tick() {
   draw();
 }
 
+function get_win_verb() {
+  var verb;
+  if(kestrel_alive) {
+    verb = kestrel_tamed? "TAMED" : "ESCAPED";
+  } else {
+    verb = "KILLED";
+  }
+  return verb;
+}
+
 function input(event) {
   if(event.keyCode == ROT.VK_P) {
     window.open(display.getContainer().toDataURL("image/png"), "_blank");
@@ -1392,13 +1403,7 @@ function input(event) {
         text = row.join("") + "\n"
           + player_cause_of_death + " AFTER " + player_score.toString() + " HOPS";
       } else {
-        var verb;
-        if(kestrel_alive) {
-          verb = kestrel_tamed? "TAMED" : "ESCAPED";
-        } else {
-          verb = "KILLED";
-        }
-        text = "_______@_____\n" + "I " + verb + " COPY FROGUE";
+        text = "_______@_____\n" + "I " + get_win_verb() + " COPY FROGUE";
       }
       window.open(
         "https://twitter.com/intent/tweet?text=" + encodeURI(text)
@@ -1465,19 +1470,13 @@ function input(event) {
           player_pos[1] += dp[1];
           player_score = Math.max(player_score, player_pos[1] - player_start_pos[1]);
           if(new_tile == "~") {
-            player_alive = false;
-            player_cause_of_death = "DROWNED";
-            player_gift_text = "";
+            kill_player("DROWNED");
           }
           if(new_tile == "[" || new_tile == "]" || new_tile == "(" || new_tile == ")") {
-            player_alive = false;
-            player_cause_of_death = "RUN OVER";
-            player_gift_text = "";
+            kill_player("RUN OVER");
           }
           if(new_tile == "T") {
-            player_alive = false;
-            player_cause_of_death = "RAILROADED";
-            player_gift_text = "";
+            kill_player("RAILROADED");
           }
         }
       }

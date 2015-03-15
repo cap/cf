@@ -1,5 +1,6 @@
-DST=s3://cpets.ch/games/test/
+DST=s3://cpets.ch/cf/
 # aws s3 cp rot.js ${DST}
 aws s3 cp rot.min.js ${DST}
+aws s3 cp favicon.ico ${DST}
 aws s3 cp index.html ${DST}
 aws s3 cp game.js ${DST}
