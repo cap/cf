@@ -1244,15 +1244,18 @@ function tick() {
     if(in_gutter(player_pos[0])) {
       player_alive = false;
       player_cause_of_death = "SWEPT AWAY";
+      player_gift_text = "";
     }
     var tile = get_tile(player_pos);
     if(tile == "[" || tile == "]" || tile == "(" || tile == ")") {
       player_alive = false;
       player_cause_of_death = "RUN OVER";
+      player_gift_text = "";
     }
     if(tile == "T") {
       player_alive = false;
       player_cause_of_death = "RAILROADED";
+      player_gift_text = "";
     }
     if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
@@ -1329,6 +1332,7 @@ function tick() {
       } else if(kestrel_alive && !kestrel_tamed) {
         player_alive = false;
         player_cause_of_death = "KESTRELED";
+        player_gift_text = "";
       }
     }
   }
@@ -1463,14 +1467,17 @@ function input(event) {
           if(new_tile == "~") {
             player_alive = false;
             player_cause_of_death = "DROWNED";
+            player_gift_text = "";
           }
           if(new_tile == "[" || new_tile == "]" || new_tile == "(" || new_tile == ")") {
             player_alive = false;
             player_cause_of_death = "RUN OVER";
+            player_gift_text = "";
           }
           if(new_tile == "T") {
             player_alive = false;
             player_cause_of_death = "RAILROADED";
+            player_gift_text = "";
           }
         }
       }
