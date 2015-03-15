@@ -45,10 +45,10 @@ var camera_t;
 
 var end_t;
 var end_active;
-var end_y = 6;
+var end_y = 100;
 var end_car_y = 8;
 var end_retry;
-var gift_dy = 20;
+var gift_dy = 25;
 
 var show_title;
 
@@ -91,8 +91,8 @@ var colors = {
 };
 
 var dogue_adjectives = ["SO", "SUCH", "MUCH", "MANY", "VRY"];
-var dogue_nouns = ["COPY", "FROG", "YENDOR", "DOGUE", "TURNS", "ASCII"];
-var dogue_singletons = ["WOW", "#7DRL", "@", "GOTY", "BOOM HEADSHOT"];
+var dogue_nouns = ["COPY", "FROG", "YENDOR", "DOGUE", "TURNS", "ASCII", "SCARE"];
+var dogue_singletons = ["WOW", "#7DRL", "@", "GOTY", "AMAZE", "NO FILTR"];
 var dogue_texts;
 var dogue_field;
 var dogue_color_field;
@@ -557,9 +557,6 @@ function init_game() {
 }
 
 function init() {
-  // document.getElementById("tweeter").click();
-
-  // camera shows ~11 whole rows
   screen_shape = [13, 13];
   field_shape = [13, 13];
   rows_shape = [1000, 27];
@@ -1259,8 +1256,9 @@ function tick() {
     }
     if(tile == "E") {
       var row_pos = world_to_rows(player_pos);
+      var row_y_1 = (row_pos[1] - 1 + rows_shape[1]) % rows_shape[1];
       for(var x = gutter_width; x < field_shape[0] - gutter_width; ++x) {
-        rows[row_pos[1] - 1][x] = ".";
+        rows[row_y_1][x] = ".";
       }
       player_gift_text = "";
       // kestrel_tamed = true;
@@ -1347,7 +1345,7 @@ function tick() {
         dogue_texts.splice(Math.floor(rng_uniform() * dogue_texts.length));
       }
       var text = {};
-      if(rng_uniform() < .3) {
+      if(rng_uniform() < .4) {
         text.text = rng_choose_evenly(dogue_singletons);
       } else {
         text.text = rng_choose_evenly(dogue_adjectives)
