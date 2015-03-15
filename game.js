@@ -263,7 +263,7 @@ function try_row() {
       }
       dt *= rng_choose([-1, 1], sign_ps);
       for(var x = 0; x < rows_shape[0]; ++x) {
-        if(rng_uniform() < .5) {
+        if(rng_uniform() < .6) {
           row[x] = "-";
         } else {
           row[x] = "~";
@@ -952,9 +952,9 @@ function draw() {
     var screen_pos = [0, 0];
     var bg = get_bg(screen_to_world(screen_pos));
     var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
-    if(player_score > 0) {
+    if(player_score > 0 && player_score <= 100) {
       display.drawText(
-        screen_pos[0], screen_pos[1], col + player_score.toString());
+        screen_pos[0], screen_pos[1], col + player_score.toString() + "%");
     }
     var x = Math.floor((screen_shape[0] - player_gift_text.length) / 2);
     display.drawText(x, screen_shape[1] - 1, "%c{#fff}" + player_gift_text);
@@ -1166,7 +1166,7 @@ function tick() {
     gen_row();
   }
 
-  if(!end_active && get_gate_progress(player_pos) > .5) {
+  if(!end_active && get_gate_progress(player_pos) > .7) {
     var keys = Object.keys(player_gifts);
     for(var i = 0; i < keys.length; ++i) {
       player_gifts[keys[i]] = false;
