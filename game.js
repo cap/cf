@@ -37,6 +37,7 @@ var player_gifts;
 var player_gifts_remaining;
 var player_driving;
 var player_cause_of_death;
+var player_gates;
 
 var camera_begin;
 var camera_end;
@@ -45,10 +46,10 @@ var camera_t;
 
 var end_t;
 var end_active;
-var end_y = 100;
+var end_y = 120;
 var end_car_y = 8;
 var end_retry;
-var gift_dy = 25;
+var gift_dy = 30;
 
 var show_title;
 
@@ -548,6 +549,7 @@ function init_game() {
   };
   player_gifts_remaining = Object.keys(player_gifts);
   player_driving = false;
+  player_gates = 0;
 
   end_retry = false;
   end_active = false;
@@ -949,13 +951,22 @@ function draw() {
   }
 
   {
-    var fg = colors.white;
-    var screen_pos = [0, 0];
-    var bg = get_bg(screen_to_world(screen_pos));
-    var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
-    if(player_score > 0 && player_score <= 100) {
+    if(player_score > 0 && player_score <= end_y) {
+      var fg = colors.white;
+      var screen_pos = [0, 0];
+      var bg = get_bg(screen_to_world(screen_pos));
+      var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
       display.drawText(
-        screen_pos[0], screen_pos[1], col + player_score.toString() + "%");
+        screen_pos[0], screen_pos[1], col + player_score.toString());
+    }
+    if(player_gates > 0 && player_gates < 4) {
+      var fg = colors.white;
+      var screen_pos = [screen_shape[0] - 3, 0];
+      var bg = get_bg(screen_to_world(screen_pos));
+      var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
+      var text = player_gates.toString() + "/4";
+      display.drawText(
+        screen_pos[0], screen_pos[1], col + text);
     }
     var x = Math.floor((screen_shape[0] - player_gift_text.length) / 2);
     display.drawText(x, screen_shape[1] - 1, "%c{#fff}" + player_gift_text);
@@ -1277,6 +1288,7 @@ function tick() {
       return end_tick();
     }
     if(tile == "?") {
+      ++player_gates;
       for(var x = 0; x < field_shape[0]; ++x) {
         if(rows[row_pos[1]][x] == "?") {
           rows[row_pos[1]][x] = "+";
