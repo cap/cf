@@ -1415,7 +1415,7 @@ function input(event) {
         text = row.join("") + "\n"
           + player_cause_of_death + " AFTER " + player_score.toString() + " HOPS";
       } else {
-        text = "_______@_____\n" + "I " + get_win_verb() + " COPY FROGUE";
+        text = "_______W_____\n" + "I " + get_win_verb() + " COPY FROGUE";
       }
       window.open(
         "https://twitter.com/intent/tweet?text=" + encodeURI(text)
