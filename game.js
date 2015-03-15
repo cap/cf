@@ -1288,6 +1288,7 @@ function tick() {
     }
     if(tile == "?") {
       ++player_gates;
+      if(send_ga_events) ga("send", "event", "cf", "gate", player_gates.toString());
       for(var x = 0; x < field_shape[0]; ++x) {
         if(rows[row_pos[1]][x] == "?") {
           rows[row_pos[1]][x] = "+";
