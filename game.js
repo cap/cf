@@ -211,7 +211,7 @@ function try_row() {
   if(gen_type == "grass") {
     for(var x = 0; x < field_shape[0]; ++x) {
       row[x] = ".";
-      if(rng_uniform() < .1) {
+      if(rng_uniform() < .1 && !(gen_y == player_start_pos[1] && x == player_start_pos[0])) {
         row[x] = "*";
       }
       if(gen_y == 0 || in_gutter(x)) {
