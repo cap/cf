@@ -46,8 +46,10 @@ var camera_t;
 
 var end_t;
 var end_active;
-var end_y = 44; // car at +6
-var gift_dy = 11;
+var end_y = 6;
+var end_car_y = 8;
+var end_retry;
+var gift_dy = 20;
 
 var show_title;
 
@@ -336,7 +338,7 @@ function try_row() {
           row[x] = "!";
         }
       }
-    } else if(gift_y == 9) {
+    } else if(gift_y == end_car_y) {
       for(var x = 0; x < rows_shape[0]; ++x) {
         row[x] = "_";
       }
@@ -351,12 +353,12 @@ function try_row() {
         if(x > field_shape[0]) {
           row[x] = rng_choose([".", "*"], [1, 1]);
         }
-        if(gift_y > 9) {
+        if(gift_y > end_car_y) {
           row[x] = "~";
           full_type.subtype = "ocean";
         }
       }
-      if(gift_y == 8) {
+      if(gift_y == end_car_y - 1) {
         var cx = Math.floor(field_shape[0] / 2);
         row[cx + 1] = "/";
       }
@@ -545,6 +547,9 @@ function init_game() {
   };
   player_gifts_remaining = Object.keys(player_gifts);
   player_driving = false;
+
+  end_retry = false;
+  end_active = false;
 
   dogue_texts = [];
 
@@ -955,26 +960,25 @@ function draw() {
         screen_pos[0], screen_pos[1], col + player_score.toString());
     }
     var x = Math.floor((screen_shape[0] - player_gift_text.length) / 2);
-    var bg = get_bg(screen_to_world([x, screen_shape[1] - 1]));
-    if(player_gift_text == "COPY FROGUE") bg = colors.black;
-    var col = "%c{" + ROT.Color.toRGB(fg) + "}" + "%b{" + ROT.Color.toRGB(bg) + "}";
-    display.drawText(x, screen_shape[1] - 1, col + player_gift_text);
+    display.drawText(x, screen_shape[1] - 1, "%c{#fff}" + player_gift_text);
   }
 
   if(show_title) {
-    var mid = [Math.floor(screen_shape[0] / 2), Math.floor(screen_shape[1] / 2)];
+    var mid = [Math.floor(screen_shape[0] / 2), Math.floor(screen_shape[1] / 2) - 1];
     display.drawText(mid[0] - 2, mid[1] - 1, "%c{#fff}COPY");
     display.drawText(mid[0] - 3, mid[1], "%c{#fff}FROGUE");
   }
 
-  if(!player_alive) {
+  if(!player_alive || (end_active && show_title)) {
     var y = Math.floor(screen_shape[1] / 2) - 2;
+    var world_y = screen_to_world([0, y])[1];
+    if(world_y == player_pos[1]) --y;
 
     var msg = player_cause_of_death;
     var x = Math.floor((screen_shape[0] - msg.length) / 2);
     display.drawText(x, y++, "%c{#fff}" + msg);
 
-    y++;
+    y = screen_shape[1] - 2;
 
     var msg = "T:TWEET";
     var x = Math.floor((screen_shape[0] - msg.length) / 2);
@@ -987,26 +991,36 @@ function draw() {
 }
 
 function end_tick() {
+  if(end_retry) {
+    init_game();
+    window.removeEventListener("keydown", input);
+    tick();
+    return;
+  }
+
   for(var i = 0; i < 10; ++i) {
     game_time += tick_dt;
     end_t += .005;
-    if(end_t > .5) {
+    if(end_t > 1) {
+      var row_pos = world_to_rows(player_pos);
+      for(var x = 0; x < field_shape[0]; ++x) {
+        rows[row_pos[1]][x] = "_";
+      }
+      player_driving = true;
+      if(game_time % 60 == 0) {
+        player_pos[0]++;
+        camera_pos[0]++;
+      }
+    }
+    if(end_t > 1) {
       if(kestrel_tamed) {
         if(kestrel_pos[0] < player_pos[0] - 1) {
           if(game_time % kestrel_dt == 0) kestrel_pos[0]++;
         }
       }
     }
-    if(end_t > 1) {
-      var row_pos = world_to_rows(player_pos);
-      for(var x = 0; x < field_shape[0]; ++x) {
-        rows[row_pos[1]][x] = "_";
-      }
-      player_gift_text = "COPY FROGUE";
-      player_driving = true;
+    if(end_t > 1.5) {
       if(game_time % 60 == 0) {
-        player_pos[0]++;
-        camera_pos[0]++;
         if(kestrel_tamed) {
           kestrel_pos[0] = player_pos[0] - 1;
         } else {
@@ -1023,6 +1037,10 @@ function end_tick() {
           }
         }
       }
+    }
+    if(end_t > 5) {
+      show_title = true;
+      window.addEventListener("keydown", input);
     }
   }
   render();
@@ -1151,7 +1169,7 @@ function tick() {
     gen_row();
   }
 
-  if(get_gate_progress(player_pos) > .5) {
+  if(!end_active && get_gate_progress(player_pos) > .5) {
     var keys = Object.keys(player_gifts);
     for(var i = 0; i < keys.length; ++i) {
       player_gifts[keys[i]] = false;
@@ -1246,6 +1264,7 @@ function tick() {
       }
       player_gift_text = "";
       // kestrel_tamed = true;
+      // kestrel_alive = false;
       if(kestrel_alive) {
         kestrel_pos = player_pos.slice();
         kestrel_pos[0] -= 10;
@@ -1349,9 +1368,6 @@ function tick() {
 
 function input(event) {
   if(event.keyCode == ROT.VK_P) {
-    // var img = document.createElement("img");
-    // img.setAttribute('src', display.getContainer().toDataURL("image/png"));
-    // document.body.appendChild(img);
     window.open(display.getContainer().toDataURL("image/png"), "_blank");
   }
   if(event.keyCode == ROT.VK_X) {
@@ -1360,16 +1376,28 @@ function input(event) {
     tick();
     return;
   }
-  if(!player_alive) {
+  if(!player_alive || (end_active && show_title)) {
     if(event.keyCode == ROT.VK_T) {
-      var row = field[world_to_field(player_pos)[1]];
-      row[player_pos[0]] = "X";
-      if(kestrel_pos[1] == player_pos[1]) {
-        if(kestrel_pos[0] >= 0 && kestrel_pos[0] < row.length) {
-          row[kestrel_pos[0]] = "K";
+      var text;
+      if(!player_alive) {
+        var row = field[world_to_field(player_pos)[1]];
+        row[player_pos[0]] = "X";
+        if(kestrel_pos[1] == player_pos[1]) {
+          if(kestrel_pos[0] >= 0 && kestrel_pos[0] < row.length) {
+            row[kestrel_pos[0]] = "K";
+          }
         }
+        text = row.join("") + "\n"
+          + player_cause_of_death + " AFTER " + player_score.toString() + " HOPS";
+      } else {
+        var verb;
+        if(kestrel_alive) {
+          verb = kestrel_tamed? "TAMED" : "ESCAPED";
+        } else {
+          verb = "KILLED";
+        }
+        text = "_______@_____\n" + "I " + verb + " COPY FROGUE";
       }
-      var text = row.join("") + "\n" + player_cause_of_death + " " + player_score.toString() + " hops in.";
       window.open(
         "https://twitter.com/intent/tweet?text=" + encodeURI(text)
           + "&hashtags=copyfrogue"
@@ -1377,13 +1405,16 @@ function input(event) {
       );
     }
     if(event.keyCode == ROT.VK_SPACE) {
-      init_game();
-      window.removeEventListener("keydown", input);
-      tick();
+      if(end_active && show_title) {
+        end_retry = true;
+      } else {
+        init_game();
+        window.removeEventListener("keydown", input);
+        tick();
+      }
     }
     return;
   }
-
   var up = (event.keyCode == ROT.VK_W || event.keyCode == ROT.VK_K || event.keyCode == ROT.VK_UP);
   var down = (event.keyCode == ROT.VK_S || event.keyCode == ROT.VK_J || event.keyCode == ROT.VK_DOWN);
   var left = (event.keyCode == ROT.VK_A || event.keyCode == ROT.VK_H || event.keyCode == ROT.VK_LEFT);
