@@ -13,7 +13,6 @@ var row_move_player;
 var row_reachable;
 var row_triggered;
 var rows_shape;
-var key_handler;
 
 var game_time;
 var tick_dt = 5;
@@ -620,7 +619,7 @@ function init() {
   init_game();
 
   tick();
-  key_handler = window.addEventListener("keydown", input);
+  window.addEventListener("keydown", input);
   window.onkeydown = key_down;
 }
 
@@ -1337,7 +1336,7 @@ function tick() {
   }
 
   if(game_time % 60 == 0) {
-    key_handler = window.addEventListener("keydown", input);
+    window.addEventListener("keydown", input);
   } else {
     setTimeout(tick, 2);
   }
