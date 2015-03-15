@@ -561,7 +561,7 @@ function init_game() {
 function init() {
   screen_shape = [13, 13];
   field_shape = [13, 13];
-  rows_shape = [1000, 27];
+  rows_shape = [1000, 100];
   gutter_width = 2;
   player_start_pos = [Math.floor(field_shape[0] / 2), 3];
   gen_first_end = 5;
