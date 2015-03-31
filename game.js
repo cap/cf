@@ -1684,7 +1684,9 @@ function gesture(event) {
   if(!player_alive || (end_active && show_title)) key = ROT.VK_SPACE;
   if(key) {
     input({keyCode: key});
-    event.gesture.preventDefault();
+    if(event.gesture) {
+      event.gesture.preventDefault();
+    }
   }
 }
 
