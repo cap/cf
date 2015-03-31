@@ -821,8 +821,6 @@ function init() {
   gen_first_end = 5;
   suppress_special = false;
 
-  var font_size = 50;
-
   // tuning settings
   // screen_shape = [116, 25];
   // field_shape = [116, 25];
@@ -846,12 +844,31 @@ function init() {
 
   player_start_pos = [Math.floor(field_shape[0] / 2), 3];
 
+  var font_size = 50;
   display = new ROT.Display({
     width: screen_shape[0],
     height: screen_shape[1],
     fontSize: font_size
   });
-  document.getElementById("display").appendChild(display.getContainer());
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+  if(w) {
+    var new_size = display.computeFontSize(w, h);
+    if(new_size < font_size) {
+      font_size = new_size;
+    }
+    display = new ROT.Display({
+      width: screen_shape[0],
+      height: screen_shape[1],
+      fontSize: font_size
+    });
+  }
+
+  var element = document.getElementById("display").appendChild(display.getContainer());
+  var hammer = new Hammer(element);
+  hammer.get('swipe').set({direction: Hammer.DIRECTION_ALL, threshold: 1, velocity: .1});
+  hammer.get('tap').set({time: 500, interval: 50});
+  hammer.on("tap swipeleft swiperight swipedown swipeup", gesture);
 
   field = new Array(field_shape[1]);
   dogue_field = new Array(field_shape[1]);
@@ -1653,6 +1670,22 @@ function get_win_verb() {
     verb = "KILLED";
   }
   return verb;
+}
+
+function gesture(event) {
+  var key;
+  switch(event.type) {
+  case "swipeleft": key = ROT.VK_A; break;
+  case "swiperight": key = ROT.VK_D; break;
+  case "swipeup": key = ROT.VK_W; break;
+  case "swipedown": key = ROT.VK_S; break;
+  case "tap": key = ROT.VK_SPACE; break;
+  }
+  if(!player_alive || (end_active && show_title)) key = ROT.VK_SPACE;
+  if(key) {
+    input({keyCode: key});
+    event.gesture.preventDefault();
+  }
 }
 
 function input(event) {
